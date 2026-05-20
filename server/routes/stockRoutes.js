@@ -4,7 +4,8 @@ const router = express.Router();
 
 const {
 
-  getLiveStocks
+  getLiveStocks,
+  getHistoricalData
 
 } = require(
 
@@ -17,6 +18,14 @@ router.get(
   "/live",
 
   getLiveStocks
+
+);
+
+router.get(
+
+  "/history/:symbol",
+
+  getHistoricalData
 
 );
 

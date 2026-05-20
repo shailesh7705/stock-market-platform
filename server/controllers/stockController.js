@@ -19,7 +19,7 @@ const getLiveStocks = async (
       return res.status(400).json({
 
         message:
-          "Symbols required"
+          "Symbols are required"
 
       });
 
@@ -28,84 +28,68 @@ const getLiveStocks = async (
     const symbolList =
       symbols.split(",");
 
-    const results =
-      await Promise.allSettled(
+    const stocks = [];
 
-        symbolList.map(
+    for (const symbol of symbolList) {
 
-          async (symbol) => {
+      try {
 
-            try {
+        const quote =
+          await yahooFinance.quote(
+            symbol
+          );
 
-              const quote =
-                await yahooFinance.quote(
-                  symbol
-                );
+        stocks.push({
 
-              return {
+          symbol,
 
-                symbol,
+          name:
+            quote.longName ||
+            quote.shortName ||
+            symbol,
 
-                name:
-                  quote.longName ||
-                  quote.shortName ||
-                  symbol,
+          price:
+            quote.regularMarketPrice || 0,
 
-                price:
-                  quote.regularMarketPrice || 0,
+          change:
+            quote.regularMarketChange || 0,
 
-                change:
-                  quote.regularMarketChange || 0,
+          changePercent:
+            quote.regularMarketChangePercent || 0,
 
-                changePercent:
-                  quote.regularMarketChangePercent || 0,
+        });
 
-              };
+      } catch (err) {
 
-            } catch (err) {
+        console.log(
 
-              console.log(
+          `Failed symbol: ${symbol}`
 
-                `Failed: ${symbol}`
+        );
 
-              );
+      }
 
-              return null;
+    }
 
-            }
-
-          }
-
-        )
-
-      );
-
-    const stocks =
-      results
-
-        .filter(
-
-          (r) =>
-
-            r.status ===
-              "fulfilled" &&
-
-            r.value
-
-        )
-
-        .map((r) => r.value);
-
-    res.json(stocks);
+    return res.json(stocks);
 
   } catch (error) {
 
-    console.log(error);
+    console.log(
 
-    res.status(500).json({
+      "Live Stock Error:",
+
+      error.message
+
+    );
+
+    return res.status(500).json({
 
       message:
-        "Failed to fetch stocks"
+        "Internal server error",
+
+      error:
+        error.message
 
     });
 
@@ -113,8 +97,99 @@ const getLiveStocks = async (
 
 };
 
+// HISTORICAL DATA
+const getHistoricalData =
+  async (req, res) => {
+
+    try {
+
+      const symbol =
+        req.params.symbol;
+
+      const range =
+        req.query.range || "1mo";
+
+      const queryOptions = {
+
+        period1:
+          new Date(
+
+            Date.now() -
+
+            30 * 24 * 60 * 60 * 1000
+
+          ),
+
+        interval: "1d",
+
+      };
+
+      const result =
+        await yahooFinance.chart(
+
+          symbol,
+
+          queryOptions
+
+        );
+
+      const chartData =
+
+        result.quotes.map(
+
+          (item) => ({
+
+            date:
+              new Date(
+                item.date
+              ).toLocaleDateString(
+
+                "en-IN",
+
+                {
+
+                  day: "numeric",
+
+                  month: "short",
+
+                }
+
+              ),
+
+            price:
+              item.close || 0,
+
+          })
+
+        );
+
+      res.json(chartData);
+
+    } catch (error) {
+
+      console.log(
+
+        "Historical Error:",
+
+        error.message
+
+      );
+
+      res.status(500).json({
+
+        message:
+          "Failed historical data"
+
+      });
+
+    }
+
+  };
+
 module.exports = {
 
-  getLiveStocks
+  getLiveStocks,
+
+  getHistoricalData,
 
 };
