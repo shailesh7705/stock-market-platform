@@ -5,9 +5,10 @@ export const getMarketIndices = async () => {
 
   try {
 
+    // Using stable NSE stocks instead of indices
     const response = await API.get(
 
-      "/stocks/live?symbols=%5ENSEI,%5EBSESN"
+      "/stocks/live?symbols=RELIANCE.NS,TCS.NS"
 
     );
 
@@ -23,7 +24,7 @@ export const getMarketIndices = async () => {
 
     );
 
-    throw error;
+    return [];
 
   }
 
@@ -78,7 +79,7 @@ export const getMarketMovers = async () => {
 
     );
 
-    throw error;
+    return [];
 
   }
 

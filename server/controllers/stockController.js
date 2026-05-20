@@ -34,22 +34,37 @@ const getLiveStocks = async (
 
       try {
 
+        const cleanSymbol =
+          symbol.trim();
+
         const quote =
           await yahooFinance.quote(
-            symbol
+            cleanSymbol
           );
+
+        if (
+
+          !quote ||
+
+          !quote.regularMarketPrice
+
+        ) {
+
+          continue;
+
+        }
 
         stocks.push({
 
-          symbol,
+          symbol: cleanSymbol,
 
           name:
             quote.longName ||
             quote.shortName ||
-            symbol,
+            cleanSymbol,
 
           price:
-            quote.regularMarketPrice || 0,
+            quote.regularMarketPrice,
 
           change:
             quote.regularMarketChange || 0,
@@ -105,9 +120,6 @@ const getHistoricalData =
 
       const symbol =
         req.params.symbol;
-
-      const range =
-        req.query.range || "1mo";
 
       const queryOptions = {
 
