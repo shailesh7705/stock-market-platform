@@ -1,29 +1,23 @@
 const express = require("express");
 
-const {
-
-  getStockData,
-  searchStocks,
-  getMultipleStocks,
-  getHistoricalStockData
-
-} = require("../controllers/stockController");
-
 const router = express.Router();
 
-/* Search Stocks */
-router.get("/search", searchStocks);
+const {
 
-router.get("/live", getMultipleStocks);
-/* Get Single Stock */
-router.get(
+  getLiveStocks
 
-  "/history/:symbol",
+} = require(
 
-  getHistoricalStockData
+  "../controllers/stockController"
 
 );
 
-router.get("/:symbol", getStockData);
+router.get(
+
+  "/live",
+
+  getLiveStocks
+
+);
 
 module.exports = router;

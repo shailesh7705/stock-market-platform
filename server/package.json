@@ -22,7 +22,7 @@
     "mongoose": "^9.6.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.7",
-    "yahoo-finance2": "^3.14.0"
+    "yahoo-finance2": "^3.14.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
