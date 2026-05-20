@@ -178,13 +178,18 @@ function StockLogo({ symbol = "", name = "", size = 36, className = "" }) {
       }}
     >
       <img
-        src={logoUrl}
-        alt={clean}
-        width={size}
-        height={size}
-        style={{ objectFit: "contain", padding: Math.round(size * 0.08) }}
-        onError={() => setImgError(true)}
-      />
+  src={logoUrl}
+  alt={clean}
+  width={size}
+  height={size}
+  style={{
+    objectFit: "contain",
+    padding: Math.round(size * 0.08)
+  }}
+  loading="lazy"
+  referrerPolicy="no-referrer"
+  onError={() => setImgError(true)}
+/>
     </div>
   );
 }
