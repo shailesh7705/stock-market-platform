@@ -47,7 +47,7 @@ const SYMBOL_DOMAIN_MAP = {
   FEDERALBNK:  "federalbank.co.in",
   BANDHANBNK:  "bandhanbank.com",
   IDFCFIRSTB:  "idfcfirstbank.com",
-  UJJIVANSFB:  "ujjivansfb.in",
+  UJJIVANSFB:  "ujjivansfb.com",
   AUBANK:      "aubank.in",
   YESBANK:     "yesbank.in",
   PNB:         "pnbindia.in",
