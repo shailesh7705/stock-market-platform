@@ -4,30 +4,50 @@ const yahooFinance = require("yahoo-finance2").default;
 
 const YF_OPTS = { validateResult: false };
 
-/* ── Add To Watchlist ────────────────────────────────────────────────────────── */
+// Safe quote fetch — never throws, always returns null on failure
+const safeQuote = async (symbol) => {
+  try {
+    const result = await Promise.race([
+      yahooFinance.quote(symbol, {}, YF_OPTS),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 6000)
+      ),
+    ]);
+    return result;
+  } catch {
+    return null;
+  }
+};
+
+/* ── Add To Watchlist ──────────────────────────────────────────────────────── */
 const addToWatchlist = async (req, res) => {
   try {
-    const { symbol, name, companyName } = req.body;
+    const { symbol, companyName, name } = req.body;
+    const finalName = companyName || name || symbol;
+
+    if (!symbol) {
+      return res.status(400).json({ message: "Symbol is required" });
+    }
 
     // Prevent duplicates
     const existing = await Watchlist.findOne({
-      user:   req.user._id,
-      symbol: symbol,
+      user: req.user._id,
+      symbol,
     });
     if (existing) {
-      return res.status(400).json({ message: "Stock already in watchlist" });
+      return res.status(400).json({ message: "Already in watchlist" });
     }
 
-    const watchlistItem = await Watchlist.create({
+    const item = await Watchlist.create({
       user:        req.user._id,
       symbol,
-      companyName: name || companyName || symbol,
+      companyName: finalName,
     });
 
     res.status(201).json({
-      _id:      watchlistItem._id,
-      symbol:   watchlistItem.symbol,
-      name:     watchlistItem.companyName,
+      _id:      item._id,
+      symbol:   item.symbol,
+      name:     item.companyName,
       exchange: "NSE",
       price:    "₹0.00",
       change:   "+0.00%",
@@ -40,25 +60,21 @@ const addToWatchlist = async (req, res) => {
   }
 };
 
-/* ── Get Watchlist with LIVE prices ─────────────────────────────────────────── */
+/* ── Get Watchlist with live prices ───────────────────────────────────────── */
 const getWatchlist = async (req, res) => {
   try {
     const watchlist = await Watchlist.find({ user: req.user._id });
 
     if (!watchlist.length) return res.json([]);
 
-    // FIX — fetch live prices for all watchlist symbols in parallel
-    const liveDataResults = await Promise.allSettled(
-      watchlist.map(item =>
-        yahooFinance.quote(item.symbol, {}, YF_OPTS)
-      )
+    // Fetch all live prices safely — one failure won't crash the rest
+    const quotes = await Promise.all(
+      watchlist.map((item) => safeQuote(item.symbol))
     );
 
     const formatted = watchlist.map((item, i) => {
-      const result = liveDataResults[i];
-      const quote  = result.status === "fulfilled" ? result.value : null;
-
-      const price         = quote?.regularMarketPrice   || 0;
+      const quote         = quotes[i];
+      const price         = quote?.regularMarketPrice         || 0;
       const changePercent = quote?.regularMarketChangePercent || 0;
       const positive      = changePercent >= 0;
 
@@ -67,11 +83,10 @@ const getWatchlist = async (req, res) => {
         symbol:   item.symbol,
         name:     item.companyName,
         exchange: "NSE",
-        // FIX — real live price instead of ₹0.00
         price:    price > 0 ? `₹${price.toFixed(2)}` : "₹0.00",
         change:   `${positive ? "+" : ""}${changePercent.toFixed(2)}%`,
         positive,
-        data:     [20, 25, 22, 30, 27, 35], // sparkline placeholder
+        data:     [20, 25, 22, 30, 27, 35],
       };
     });
 
@@ -82,16 +97,16 @@ const getWatchlist = async (req, res) => {
   }
 };
 
-/* ── Remove From Watchlist ───────────────────────────────────────────────────── */
+/* ── Remove From Watchlist ─────────────────────────────────────────────────── */
 const removeFromWatchlist = async (req, res) => {
   try {
     const item = await Watchlist.findOne({
       _id:  req.params.id,
-      user: req.user._id, // FIX — ensure user owns this item
+      user: req.user._id,
     });
 
     if (!item) {
-      return res.status(404).json({ message: "Watchlist item not found" });
+      return res.status(404).json({ message: "Item not found" });
     }
 
     await item.deleteOne();

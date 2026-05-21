@@ -1,88 +1,45 @@
-import {
 
-  BrowserRouter,
-  Routes,
-  Route
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-} from "react-router-dom";
-
-import Home from "./pages/Home";
-
-import Login from "./pages/Login";
-
-import Signup from "./pages/Signup";
-
-import DashboardPage from "./pages/DashboardPage";
-
-import ProtectedRoute from "./components/ProtectedRoute";
-
+import Home               from "./pages/Home";
+import Login              from "./pages/Login";
+import Signup             from "./pages/Signup";
+import DashboardPage      from "./pages/DashboardPage";
+import StockDetailsPage   from "./pages/StockDetailsPage";
+import WatchlistPage      from "./pages/WatchlistPage";
+import ProtectedRoute     from "./components/ProtectedRoute";
 import NotificationListener from "./components/notifications/NotificationListener";
 
-import StockDetailsPage from "./pages/StockDetailsPage";
-
 function App() {
-
   return (
-
     <BrowserRouter>
-
-      {/* Global Notification Engine */}
       <NotificationListener />
-
       <Routes>
 
-        <Route
-          path="/"
-          element={<Home />}
-        />
+        {/* Public */}
+        <Route path="/"       element={<Home />}   />
+        <Route path="/login"  element={<Login />}  />
+        <Route path="/signup" element={<Signup />} />
 
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+        {/* Protected */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute><DashboardPage /></ProtectedRoute>
+        } />
 
-        <Route
-          path="/signup"
-          element={<Signup />}
-        />
+        <Route path="/stock/:symbol" element={
+          <ProtectedRoute><StockDetailsPage /></ProtectedRoute>
+        } />
 
-        <Route
+        <Route path="/watchlist" element={
+          <ProtectedRoute><WatchlistPage /></ProtectedRoute>
+        } />
 
-          path="/dashboard"
-
-          element={
-
-            <ProtectedRoute>
-
-              <DashboardPage />
-
-            </ProtectedRoute>
-
-          }
-
-        />
-        <Route
-
-  path="/stock/:symbol"
-
-  element={
-
-    <ProtectedRoute>
-
-      <StockDetailsPage />
-
-    </ProtectedRoute>
-
-  }
-
-/>
+        {/* Fallback — redirect unknown routes to dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
 
       </Routes>
-
     </BrowserRouter>
-
   );
-
 }
 
 export default App;
