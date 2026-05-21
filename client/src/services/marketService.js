@@ -1,86 +1,26 @@
+// client/src/services/marketService.js
 import API from "../api/axios";
 
-/* Market Indices */
+/* Market Indices — NIFTY 50 + SENSEX */
 export const getMarketIndices = async () => {
-
   try {
-
-    // Using stable NSE stocks instead of indices
-    const response = await API.get(
-
-      "/stocks/live?symbols=RELIANCE.NS,TCS.NS"
-
-    );
-
+    // FIX — use dedicated indices endpoint
+    const response = await API.get("/stocks/indices");
     return response.data;
-
   } catch (error) {
-
-    console.log(
-
-      "Market Indices Error:",
-
-      error
-
-    );
-
+    console.log("Market Indices Error:", error);
     return [];
-
   }
-
 };
 
 /* Market Movers */
 export const getMarketMovers = async () => {
-
   try {
-
-    const symbols = [
-
-      "RELIANCE.NS",
-
-      "TCS.NS",
-
-      "INFY.NS",
-
-      "HDFCBANK.NS",
-
-      "ICICIBANK.NS",
-
-      "SBIN.NS",
-
-      "LT.NS",
-
-      "AXISBANK.NS",
-
-      "ONGC.NS",
-
-      "BPCL.NS",
-
-      "ITC.NS"
-
-    ];
-
-    const response = await API.get(
-
-      `/stocks/live?symbols=${symbols.join(",")}`
-
-    );
-
+    // FIX — use dedicated movers endpoint
+    const response = await API.get("/stocks/movers");
     return response.data;
-
   } catch (error) {
-
-    console.log(
-
-      "Market Movers Error:",
-
-      error
-
-    );
-
+    console.log("Market Movers Error:", error);
     return [];
-
   }
-
 };
