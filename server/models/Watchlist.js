@@ -14,9 +14,10 @@ const watchlistSchema = new mongoose.Schema({
   },
 
   companyName: {
-    type: String,
-    required: true
-  }
+  type: String,
+  required: false,
+  default: ""
+},
 
 }, {
   timestamps: true
