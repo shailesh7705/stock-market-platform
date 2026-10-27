@@ -26,6 +26,7 @@ import { getLiveStocks } from "../services/stockService";
 import useAlertStore from "../store/alertStore";
 import useAuthStore from "../store/authStore";
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
+import StockLogo from "../components/ui/StockLogo";
 import toast from "react-hot-toast";
 
 function cleanSymbol(sym = "") {
@@ -351,22 +352,25 @@ function AlertsPage() {
                       <div>
                         {/* Top row: Symbol and Status */}
                         <div className="flex items-start justify-between gap-3 mb-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <Link
-                                to={`/stock/${sym}`}
-                                className="text-base font-bold text-white hover:text-emerald-400 transition-colors flex items-center gap-1 group"
-                              >
-                                {sym}
-                                <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </Link>
-                              <span className="text-[10px] font-semibold text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">
-                                NSE
-                              </span>
+                          <div className="flex items-center gap-3">
+                            <StockLogo symbol={alert.symbol} size={36} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  to={`/stock/${sym}`}
+                                  className="text-base font-bold text-white hover:text-emerald-400 transition-colors flex items-center gap-1 group"
+                                >
+                                  {sym}
+                                  <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </Link>
+                                <span className="text-[10px] font-semibold text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">
+                                  NSE
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-500 mt-0.5">
+                                Created {formatRelativeTime(alert.createdAt)}
+                              </p>
                             </div>
-                            <p className="text-[11px] text-gray-500 mt-0.5">
-                              Created {formatRelativeTime(alert.createdAt)}
-                            </p>
                           </div>
 
                           <span

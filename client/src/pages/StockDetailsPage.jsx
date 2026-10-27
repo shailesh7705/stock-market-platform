@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import Card from "../components/ui/Card";
+import StockLogo from "../components/ui/StockLogo";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -10,8 +11,6 @@ import {
   Bookmark,
   BookmarkCheck,
   ChevronLeft,
-  Share2,
-  TrendingUp,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { getLiveStocks } from "../services/stockService";
@@ -22,6 +21,7 @@ import {
 } from "../services/watchlistService";
 import StockDetailsChart from "../components/charts/StockDetailsChart";
 import StockInsights from "../components/stocks/StockInsights";
+import CompanyProsCons from "../components/stocks/CompanyProsCons";
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
 import useWatchlistStore from "../store/watchlistStore";
 import toast from "react-hot-toast";
@@ -112,7 +112,7 @@ function StockDetailsPage() {
       <AppLayout>
         <div className="max-w-7xl mx-auto space-y-6 animate-pulse">
           <div className="h-8 w-44 bg-white/5 rounded-xl" />
-          <div className="h-16 w-80 bg-white/5 rounded-2xl" />
+          <div className="h-20 w-full bg-white/5 rounded-3xl" />
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
             <div className="xl:col-span-8 h-96 bg-white/5 rounded-2xl" />
             <div className="xl:col-span-4 h-96 bg-white/5 rounded-2xl" />
@@ -138,48 +138,57 @@ function StockDetailsPage() {
           </Link>
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-              Live Market Data
+              Live NSE Market Data
             </span>
           </div>
         </div>
 
-        {/* Stock Hero Header */}
+        {/* Stock Hero Header with Company Logo */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-5 bg-[#0e1626] border border-white/[0.08] p-6 rounded-3xl"
+          className="flex flex-col md:flex-row md:items-center justify-between gap-5 bg-[#0e1626] border border-white/[0.08] p-6 rounded-3xl shadow-xl"
         >
-          {/* Left Title & Pricing */}
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-3xl font-extrabold text-white tracking-tight">
-                {displaySymbol}
-              </h1>
-              <span className="text-xs font-bold text-gray-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md">
-                NSE · EQUITY
-              </span>
-              <div
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
-                  isPositive
-                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                    : "bg-rose-500/15 text-rose-400 border border-rose-500/30"
-                }`}
-              >
-                {isPositive ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-                {isPositive ? "+" : ""}
-                {changePercent}% Today
+          {/* Left Title & Pricing with Logo */}
+          <div className="flex items-start gap-4">
+            <StockLogo
+              symbol={displaySymbol}
+              name={stock?.longName || displaySymbol}
+              size={54}
+              className="mt-0.5"
+            />
+
+            <div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-3xl font-extrabold text-white tracking-tight">
+                  {displaySymbol}
+                </h1>
+                <span className="text-xs font-bold text-gray-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md">
+                  NSE · EQUITY
+                </span>
+                <div
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                    isPositive
+                      ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                      : "bg-rose-500/15 text-rose-400 border border-rose-500/30"
+                  }`}
+                >
+                  {isPositive ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                  {isPositive ? "+" : ""}
+                  {changePercent}% Today
+                </div>
               </div>
-            </div>
 
-            <p className="text-sm text-gray-400 mt-1">
-              {stock?.longName || stock?.shortName || displaySymbol}
-            </p>
+              <p className="text-sm text-gray-400 mt-1">
+                {stock?.longName || stock?.shortName || displaySymbol}
+              </p>
 
-            <div className="flex items-baseline gap-3 mt-3">
-              <span className="text-4xl font-extrabold text-white tracking-tight">
-                ₹{stock?.price ? stock.price.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
-              </span>
-              <span className="text-xs text-gray-500">Real-time NSE Indian Rupee</span>
+              <div className="flex items-baseline gap-3 mt-3">
+                <span className="text-4xl font-extrabold text-white tracking-tight">
+                  ₹{stock?.price ? stock.price.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                </span>
+                <span className="text-xs text-gray-500">Real-time Indian Rupee</span>
+              </div>
             </div>
           </div>
 
@@ -217,7 +226,7 @@ function StockDetailsPage() {
           </div>
         </motion.div>
 
-        {/* Main Grid: Chart & Insights */}
+        {/* Main Grid: Advanced Chart & Insights */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Left Chart Card */}
           <div className="xl:col-span-8 space-y-6">
@@ -233,10 +242,10 @@ function StockDetailsPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">
-                    Want an email when {displaySymbol} hits your target?
+                    Automate notifications for {displaySymbol}
                   </h3>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Our alert engine monitors prices every minute and sends an instant email notification.
+                    Our 60-second engine monitors price targets and emails you instantly upon execution.
                   </p>
                 </div>
               </div>
@@ -254,6 +263,11 @@ function StockDetailsPage() {
           <div className="xl:col-span-4">
             <StockInsights stock={stock} />
           </div>
+        </div>
+
+        {/* ── Pros & Cons (Investment Checklist) ── */}
+        <div className="w-full">
+          <CompanyProsCons stock={stock} />
         </div>
       </div>
 

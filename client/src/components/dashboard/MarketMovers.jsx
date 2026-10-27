@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Card from "../ui/Card";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Flame, BarChart2 } from "lucide-react";
+import StockLogo from "../ui/StockLogo";
 import { getMarketMovers } from "../../services/marketService";
 
 function cleanSymbol(sym = "") {
@@ -106,11 +107,9 @@ function MarketMovers() {
                   onClick={() => navigate(`/stock/${sym}`)}
                   className="flex items-center justify-between p-2.5 rounded-xl bg-[#080d1a]/50 hover:bg-[#080d1a] border border-white/[0.04] hover:border-white/10 transition-all cursor-pointer group"
                 >
-                  {/* Left: Symbol & Name */}
+                  {/* Left: Symbol & Name with Logo */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/[0.07] flex items-center justify-center text-[10px] font-bold text-gray-300 shrink-0">
-                      {sym.slice(0, 2)}
-                    </div>
+                    <StockLogo symbol={sym} name={stock.name} size={32} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[13px] font-bold text-white group-hover:text-emerald-400 transition-colors">

@@ -96,6 +96,25 @@
 
 ---
 
+### Ticket 6: Company Logos, Advanced Candlestick Charts & Investment Pros/Cons (Tickertape & INDmoney Experience)
+- **Multi-Tier Company Logo Resolver (`StockLogo.jsx`)**:
+  - Automatically displays official high-resolution corporate logos for Indian equities.
+  - Multi-tier resolution strategy: Tickertape CDN / Clearbit corporate domains → Google Favicon high-res proxy → Elegant fallback gradient badge with ticker initials.
+  - Uniformly integrated across **Stock Details**, **Watchlists**, **Alerts Cards**, **Stock Search Dropdown**, and **Top Market Movers**.
+- **Advanced Interactive Charts (`StockDetailsChart.jsx`)**:
+  - **Candlestick vs. Area Line View**: Toggle between smooth gradient area charts and high-precision financial Candlestick bars (displaying Open, High, Low, Close with custom SVG wicks and bodies).
+  - **Technical Indicators (20 EMA Overlay)**: Toggleable 20-period Exponential Moving Average overlay for trend direction and support/resistance analysis.
+  - **Volume Histogram**: Integrated lower bar chart displaying trading volume color-coded to bullish/bearish candle closes.
+  - **Interactive OHLCV Banner**: Real-time hover cursor updating Open, High, Low, Close, and Volume instantly at the top of the chart canvas.
+  - **Multi-Timeframe Support**: Seamless switching between `1D`, `1W`, `1M`, `3M`, and `1Y`.
+- **Investment Pros & Cons / SWOT Analysis (`CompanyProsCons.jsx`)**:
+  - Inspired by Tickertape's Investment Checklist and INDmoney's Stock Scorecard.
+  - **Dynamic Fundamental & Technical Evaluation**: Analyzes Valuation (P/E ratio against benchmarks), 52-Week Range proximity, Day's Trading Momentum, Dividend Yield, and Trading Volume Liquidity.
+  - **Balanced Scorecard**: Clearly segmented into Green Pros (Strengths & Tailwinds) and Amber/Red Cons (Watchouts & Valuation Flags) with an overall Investment Checklist score (e.g. `3 of 5 criteria passed`).
+  - **Contextual Explanations**: Plain-English rationale for each flag so retail investors can make informed decisions in seconds.
+
+---
+
 ## ⚙️ Environment Variables
 
 ### Server (`server/.env` & Render Environment Variables)

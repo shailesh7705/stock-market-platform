@@ -22,6 +22,7 @@ import { getWatchlist, removeFromWatchlist, addToWatchlist } from "../services/w
 import { getLiveStocks, searchStocks } from "../services/stockService";
 import useWatchlistStore from "../store/watchlistStore";
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
+import StockLogo from "../components/ui/StockLogo";
 import toast from "react-hot-toast";
 
 function cleanSymbol(sym = "") {
@@ -285,11 +286,9 @@ function WatchlistPage() {
                     onClick={() => navigate(`/stock/${sym}`)}
                     className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors cursor-pointer group"
                   >
-                    {/* Left: Symbol & Name */}
+                    {/* Left: Symbol & Name with Logo */}
                     <div className="flex items-center gap-3.5 min-w-0 md:w-1/3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-xs flex items-center justify-center shrink-0">
-                        {sym.slice(0, 2)}
-                      </div>
+                      <StockLogo symbol={sym} name={stock.name} size={40} />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">

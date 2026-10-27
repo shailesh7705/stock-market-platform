@@ -9,6 +9,7 @@ import { getLiveStocks } from "../../services/stockService";
 import useWatchlistStore from "../../store/watchlistStore";
 import { Trash2, Bell, Bookmark, ArrowRight, TrendingUp, TrendingDown, Plus } from "lucide-react";
 import CreateAlertModal from "../alerts/CreateAlertModal";
+import StockLogo from "../ui/StockLogo";
 import toast from "react-hot-toast";
 
 function cleanSymbol(sym = "") {
@@ -139,11 +140,9 @@ function WatchlistWidget() {
                     onClick={() => navigate(`/stock/${sym}`)}
                     className="flex items-center justify-between p-3 rounded-2xl bg-[#080d1a]/50 hover:bg-[#080d1a] border border-white/[0.04] hover:border-white/10 transition-all cursor-pointer group"
                   >
-                    {/* Left Symbol & Name */}
+                    {/* Left Symbol & Name with Logo */}
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-[10px] flex items-center justify-center shrink-0">
-                        {sym.slice(0, 2)}
-                      </div>
+                      <StockLogo symbol={sym} name={stock.name} size={32} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[13px] font-bold text-white group-hover:text-emerald-400 transition-colors">

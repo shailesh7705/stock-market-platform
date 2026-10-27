@@ -7,6 +7,7 @@ import { searchStocks } from "../../services/stockService";
 import { addToWatchlist } from "../../services/watchlistService";
 import useWatchlistStore from "../../store/watchlistStore";
 import CreateAlertModal from "../alerts/CreateAlertModal";
+import StockLogo from "../ui/StockLogo";
 import toast from "react-hot-toast";
 
 function cleanSymbol(sym = "") {
@@ -187,9 +188,7 @@ function StockSearch() {
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold text-[11px] flex items-center justify-center shrink-0 border border-emerald-500/20">
-                            {sym.slice(0, 2)}
-                          </div>
+                          <StockLogo symbol={stock.symbol} name={stock.name} size={32} />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
                               <span className="text-xs font-bold text-white group-hover:text-emerald-400">
