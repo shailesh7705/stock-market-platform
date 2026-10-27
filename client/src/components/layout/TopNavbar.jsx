@@ -15,7 +15,7 @@ import {
   Layers,
   Search,
   ChevronDown,
-  Zap,
+  Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
@@ -195,26 +195,26 @@ export default function TopNavbar({ onOpenMobileMenu }) {
   ];
 
   return (
-    <header className="sticky top-0 z-50 h-16 w-full border-b border-white/[0.08] bg-[#090e17]/95 backdrop-blur-xl shrink-0 px-4 lg:px-6">
-      <div className="h-full max-w-7xl mx-auto flex items-center justify-between gap-4">
-        {/* ── Left: Brand Logo & Navigation Links ── */}
-        <div className="flex items-center gap-6 min-w-0">
-          {/* Mobile hamburger toggle */}
+    <header className="sticky top-0 z-50 h-16 w-full border-b border-white/[0.08] bg-[#080b11]/95 backdrop-blur-xl shrink-0 px-3 sm:px-6">
+      <div className="h-full max-w-7xl mx-auto flex items-center justify-between gap-3">
+        {/* ── Zone 1: Logo & Nav Links ── */}
+        <div className="flex items-center gap-4 lg:gap-6 min-w-0">
+          {/* Mobile hamburger button */}
           <button
             onClick={onOpenMobileMenu}
-            className="lg:hidden w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white shrink-0 transition-colors"
+            className="lg:hidden w-9 h-9 rounded-xl bg-[#0f1422] border border-white/10 flex items-center justify-center text-gray-300 hover:text-white shrink-0 transition-colors"
             title="Open menu"
           >
             <Menu size={18} />
           </button>
 
-          {/* Platform Brand Logo */}
+          {/* Brand Logo */}
           <Link
             to="/dashboard"
             className="flex items-center gap-2.5 group shrink-0 select-none"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/35 transition-all">
-              <div className="w-full h-full bg-[#090e17] rounded-[10px] flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-400 via-teal-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:shadow-emerald-500/40 transition-all">
+              <div className="w-full h-full bg-[#080b11] rounded-[10px] flex items-center justify-center">
                 <Activity size={18} className="text-emerald-400 group-hover:scale-110 transition-transform" />
               </div>
             </div>
@@ -222,21 +222,21 @@ export default function TopNavbar({ onOpenMobileMenu }) {
               <span className="text-lg font-black text-white tracking-tight group-hover:text-emerald-400 transition-colors">
                 StockPulse
               </span>
-              <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <span className="hidden sm:inline-block text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                 PRO
               </span>
             </div>
           </Link>
 
-          {/* Desktop Navigation Links (TradingView / Zerodha Inspired) */}
-          <nav className="hidden lg:flex items-center gap-1 pl-4 border-l border-white/[0.08]">
+          {/* Desktop Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-1 pl-3 border-l border-white/[0.08]">
             {navLinks.map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.label}
                   onClick={() => (item.action ? item.action() : navigate(item.path))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all select-none ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all select-none ${
                     item.isActive
                       ? "bg-white/10 text-white shadow-xs border border-white/10"
                       : "text-gray-400 hover:text-white hover:bg-white/[0.04]"
@@ -261,19 +261,19 @@ export default function TopNavbar({ onOpenMobileMenu }) {
           </nav>
         </div>
 
-        {/* ── Center: Search Bar ── */}
-        <div className="flex-1 max-w-xs md:max-w-sm lg:max-w-md mx-2">
+        {/* ── Zone 2: Unbreakable Command Palette Search Trigger ── */}
+        <div className="flex-1 max-w-[200px] sm:max-w-xs md:max-w-sm lg:max-w-md mx-1 sm:mx-3">
           <StockSearch />
         </div>
 
-        {/* ── Right: Market Status, Ticker, Watchlist Shortcut & Profile ── */}
-        <div className="flex items-center gap-3 shrink-0">
-          {/* Live Market Indices Ticker (Desktop) */}
-          <div className="hidden xl:flex items-center gap-3 pr-2 border-r border-white/[0.08]">
+        {/* ── Zone 3: Market Status & User Controls ── */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Live Market Indices Ticker (Desktop / Wide screens) */}
+          <div className="hidden xl:flex items-center gap-2.5 pr-2 border-r border-white/[0.08]">
             {marketData.slice(0, 2).map((market) => (
               <div
                 key={market.symbol}
-                className="flex items-center gap-1.5 bg-[#0e1626] border border-white/5 px-2.5 py-1 rounded-xl font-mono text-xs"
+                className="flex items-center gap-1.5 bg-[#0e1422] border border-white/5 px-2.5 py-1 rounded-xl font-mono text-xs"
               >
                 <span className="text-[10px] text-gray-400 font-sans font-bold">
                   {market.name === "NIFTY 50" ? "NIFTY" : "SENSEX"}
@@ -293,7 +293,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
               </div>
             ))}
 
-            {/* NSE Live / Closed Status */}
+            {/* Market Live Status Pill */}
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] font-bold">
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -305,7 +305,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
               </span>
             </div>
 
-            {/* IST Clock */}
+            {/* Live IST Clock */}
             <div className="flex items-center gap-1 text-[11px] text-gray-400 font-mono">
               <Clock size={11} className="text-gray-500" />
               <span>{formattedTime}</span>
@@ -315,13 +315,13 @@ export default function TopNavbar({ onOpenMobileMenu }) {
           {/* Quick Watchlist Shortcut Pill */}
           <Link
             to="/watchlist"
-            className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#0e1626] hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-300 hover:text-white transition-all"
+            className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#0e1422] hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-300 hover:text-white transition-all select-none"
             title="My Watchlist"
           >
-            <Bookmark size={14} className="text-blue-400" />
+            <Bookmark size={14} className="text-cyan-400" />
             <span className="hidden md:inline">Watchlist</span>
             {watchlistCount > 0 && (
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 font-mono">
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">
                 {watchlistCount}
               </span>
             )}
@@ -334,12 +334,12 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                 setShowNotifications(!showNotifications);
                 setShowProfileMenu(false);
               }}
-              className="relative w-9 h-9 rounded-xl bg-[#0e1626] border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 transition-all"
+              className="relative w-9 h-9 rounded-xl bg-[#0e1422] border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 transition-all"
               title="Notifications"
             >
-              <Bell size={16} />
+              <Bell size={15} />
               {unreadNotesCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-emerald-500 text-black text-[10px] font-black flex items-center justify-center border-2 border-[#090e17]">
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-emerald-500 text-black text-[10px] font-black flex items-center justify-center border-2 border-[#080b11]">
                   {unreadNotesCount > 9 ? "9+" : unreadNotesCount}
                 </span>
               )}
@@ -352,7 +352,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.96 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-12 w-80 sm:w-96 bg-[#0e1626] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 z-50 overflow-hidden backdrop-blur-xl"
+                  className="absolute right-0 top-12 w-80 sm:w-96 bg-[#0e1422] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 z-50 overflow-hidden backdrop-blur-xl"
                 >
                   <div className="px-4 py-3 border-b border-white/[0.08] flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -409,7 +409,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                     )}
                   </div>
 
-                  <div className="p-2.5 border-t border-white/[0.08] text-center bg-[#090e17]">
+                  <div className="p-2.5 border-t border-white/[0.08] text-center bg-[#0a0e17]">
                     <Link
                       to="/alerts"
                       onClick={() => setShowNotifications(false)}
@@ -423,16 +423,16 @@ export default function TopNavbar({ onOpenMobileMenu }) {
             </AnimatePresence>
           </div>
 
-          {/* User Profile Menu */}
+          {/* User Profile Avatar & Menu */}
           <div className="relative" ref={profileRef}>
             <button
               onClick={() => {
                 setShowProfileMenu(!showProfileMenu);
                 setShowNotifications(false);
               }}
-              className="flex items-center gap-2 p-1 pr-2 rounded-xl bg-[#0e1626] hover:bg-white/10 border border-white/10 transition-all select-none"
+              className="flex items-center gap-2 p-1 pr-2 rounded-xl bg-[#0e1422] hover:bg-white/10 border border-white/10 transition-all select-none"
             >
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black font-black text-xs shadow-md shadow-emerald-500/20">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-400 via-teal-500 to-cyan-400 flex items-center justify-center text-black font-black text-xs shadow-md shadow-emerald-500/20">
                 {initials}
               </div>
               <ChevronDown size={13} className="text-gray-400 hidden sm:block" />
@@ -445,12 +445,11 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.96 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-12 w-64 bg-[#0e1626] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 z-50 overflow-hidden backdrop-blur-xl"
+                  className="absolute right-0 top-12 w-64 bg-[#0e1422] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 z-50 overflow-hidden backdrop-blur-xl"
                 >
-                  {/* User Profile Header */}
                   <div className="p-4 border-b border-white/[0.08]">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black font-black text-sm shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-400 via-teal-500 to-cyan-400 flex items-center justify-center text-black font-black text-sm shrink-0">
                         {initials}
                       </div>
                       <div className="min-w-0">
@@ -464,11 +463,10 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                     </div>
                   </div>
 
-                  {/* Summary Stats Pill in Dropdown */}
-                  <div className="grid grid-cols-2 gap-1 p-2 bg-[#090e17] border-b border-white/[0.06] text-center">
+                  <div className="grid grid-cols-2 gap-1 p-2 bg-[#0a0e17] border-b border-white/[0.06] text-center">
                     <div className="p-1.5 rounded-lg bg-white/[0.02]">
                       <p className="text-[10px] text-gray-500 uppercase font-bold">Watchlist</p>
-                      <p className="text-xs font-mono font-bold text-white mt-0.5">{watchlistCount} stocks</p>
+                      <p className="text-xs font-mono font-bold text-cyan-400 mt-0.5">{watchlistCount} stocks</p>
                     </div>
                     <div className="p-1.5 rounded-lg bg-white/[0.02]">
                       <p className="text-[10px] text-gray-500 uppercase font-bold">Active Alerts</p>
@@ -476,7 +474,6 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                     </div>
                   </div>
 
-                  {/* Navigation Links in Profile Menu */}
                   <div className="p-2 space-y-1">
                     <button
                       onClick={() => {
@@ -496,7 +493,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-white/5 transition-all"
                     >
-                      <Bookmark size={14} className="text-blue-400" />
+                      <Bookmark size={14} className="text-cyan-400" />
                       <span>My Watchlist</span>
                     </button>
 
@@ -512,7 +509,6 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                     </button>
                   </div>
 
-                  {/* Logout Button */}
                   <div className="p-2 border-t border-white/[0.08]">
                     <button
                       onClick={handleLogout}

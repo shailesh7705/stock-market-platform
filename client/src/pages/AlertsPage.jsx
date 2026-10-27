@@ -398,7 +398,7 @@ function AlertsPage() {
                               ) : (
                                 <TrendingDown size={13} className="text-rose-400" />
                               )}
-                              <span className="text-[15px] font-bold text-white">
+                              <span className="text-[15px] font-bold text-white font-mono tabular-nums">
                                 ₹{formatCurrency(alert.targetPrice)}
                               </span>
                             </div>
@@ -411,10 +411,10 @@ function AlertsPage() {
                             <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
                               Current Price
                             </p>
-                            <p className="text-[15px] font-bold text-gray-200 mt-0.5">
+                            <p className="text-[15px] font-bold text-gray-200 mt-0.5 font-mono tabular-nums">
                               ₹{formatCurrency(isTriggered ? alert.triggeredPrice || current : current)}
                             </p>
-                            <span className="text-[10px] text-emerald-400">
+                            <span className="text-[10px] text-emerald-400 font-mono">
                               {isTriggered ? "Hit Price" : distanceText || "Live Tracked"}
                             </span>
                           </div>

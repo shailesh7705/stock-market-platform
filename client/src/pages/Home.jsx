@@ -151,10 +151,10 @@ function Home() {
               { sym: "TCS", price: "₹2,496.50", change: "+0.85%", isPos: true },
             ].map((idx) => (
               <div key={idx.sym} className="p-3 bg-[#080d1a] border border-white/[0.05] rounded-xl">
-                <span className="text-[10px] text-gray-500 font-bold uppercase">{idx.sym}</span>
-                <p className="text-[15px] font-extrabold text-white mt-0.5">{idx.price}</p>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">{idx.sym}</span>
+                <p className="text-[15px] font-extrabold text-white mt-0.5 font-mono tabular-nums">{idx.price}</p>
                 <span
-                  className={`text-[11px] font-bold ${
+                  className={`text-[11px] font-bold font-mono tabular-nums ${
                     idx.isPos ? "text-emerald-400" : "text-rose-400"
                   }`}
                 >

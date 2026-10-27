@@ -184,10 +184,10 @@ function StockDetailsPage() {
               </p>
 
               <div className="flex items-baseline gap-3 mt-3">
-                <span className="text-4xl font-extrabold text-white tracking-tight">
+                <span className="text-4xl font-extrabold text-white font-mono tabular-nums tracking-tight">
                   ₹{stock?.price ? stock.price.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
                 </span>
-                <span className="text-xs text-gray-500">Real-time Indian Rupee</span>
+                <span className="text-xs text-gray-500 font-medium">Real-time Indian Rupee</span>
               </div>
             </div>
           </div>

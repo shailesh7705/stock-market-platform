@@ -315,9 +315,9 @@ function WatchlistPage() {
                     {/* Right: Price, % Change & Actions */}
                     <div className="flex items-center justify-between md:justify-end gap-5">
                       <div className="text-right">
-                        <p className="text-base font-extrabold text-white">{stock.price || "—"}</p>
+                        <p className="text-base font-extrabold text-white font-mono tabular-nums">{stock.price || "—"}</p>
                         <p
-                          className={`text-xs font-bold inline-flex items-center gap-0.5 mt-0.5 ${
+                          className={`text-xs font-bold font-mono tabular-nums inline-flex items-center gap-0.5 mt-0.5 ${
                             stock.positive ? "text-emerald-400" : "text-rose-400"
                           }`}
                         >
