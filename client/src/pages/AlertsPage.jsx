@@ -26,7 +26,7 @@ import { getLiveStocks } from "../services/stockService";
 import useAlertStore from "../store/alertStore";
 import useAuthStore from "../store/authStore";
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
-import StockLogo from "../components/ui/StockLogo";
+import CompanyLogo from "../components/ui/CompanyLogo";
 import toast from "react-hot-toast";
 
 function cleanSymbol(sym = "") {
@@ -353,7 +353,7 @@ function AlertsPage() {
                         {/* Top row: Symbol and Status */}
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex items-center gap-3">
-                            <StockLogo symbol={alert.symbol} size={36} />
+                            <CompanyLogo symbol={alert.symbol} size={36} />
                             <div>
                               <div className="flex items-center gap-2">
                                 <Link

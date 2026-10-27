@@ -97,21 +97,42 @@
 ---
 
 ### Ticket 6: Company Logos, Advanced Candlestick Charts & Investment Pros/Cons (Tickertape & INDmoney Experience)
-- **Multi-Tier Company Logo Resolver (`StockLogo.jsx`)**:
+- **Multi-Tier Company Logo Resolver (`CompanyLogo.jsx`)**:
   - Automatically displays official high-resolution corporate logos for Indian equities.
   - Multi-tier resolution strategy: Tickertape CDN / Clearbit corporate domains → Google Favicon high-res proxy → Elegant fallback gradient badge with ticker initials.
   - Uniformly integrated across **Stock Details**, **Watchlists**, **Alerts Cards**, **Stock Search Dropdown**, and **Top Market Movers**.
-- **Advanced Interactive Charts (`StockDetailsChart.jsx`)**:
-  - **Candlestick vs. Area Line View**: Toggle between smooth gradient area charts and high-precision financial Candlestick bars (displaying Open, High, Low, Close with custom SVG wicks and bodies).
-  - **Technical Indicators (20 EMA Overlay)**: Toggleable 20-period Exponential Moving Average overlay for trend direction and support/resistance analysis.
-  - **Volume Histogram**: Integrated lower bar chart displaying trading volume color-coded to bullish/bearish candle closes.
-  - **Interactive OHLCV Banner**: Real-time hover cursor updating Open, High, Low, Close, and Volume instantly at the top of the chart canvas.
-  - **Multi-Timeframe Support**: Seamless switching between `1D`, `1W`, `1M`, `3M`, and `1Y`.
 - **Investment Pros & Cons / SWOT Analysis (`CompanyProsCons.jsx`)**:
   - Inspired by Tickertape's Investment Checklist and INDmoney's Stock Scorecard.
   - **Dynamic Fundamental & Technical Evaluation**: Analyzes Valuation (P/E ratio against benchmarks), 52-Week Range proximity, Day's Trading Momentum, Dividend Yield, and Trading Volume Liquidity.
   - **Balanced Scorecard**: Clearly segmented into Green Pros (Strengths & Tailwinds) and Amber/Red Cons (Watchouts & Valuation Flags) with an overall Investment Checklist score (e.g. `3 of 5 criteria passed`).
   - **Contextual Explanations**: Plain-English rationale for each flag so retail investors can make informed decisions in seconds.
+
+---
+
+### Ticket 7: TradingView Lightweight Charts & SEBI-Categorized Top Movers
+- **TradingView Lightweight Charts (`TradingViewChart.jsx`)**:
+  - Replaced custom SVG charts with the official **TradingView Lightweight Charts v5** WebGL/Canvas financial charting engine.
+  - **Realistic Candlesticks**: Green bullish (`#10b981`) and red bearish (`#ef4444`) candles with pixel-perfect wicks and bodies.
+  - **Chart Types**: Instant toggle between **Candles**, **Area**, and **Bars**.
+  - **7 Timeframe Selectors**: `1D`, `5D`, `1M`, `3M`, `6M`, `1Y`, and `5Y` backed by real Yahoo Finance OHLC quote intervals (5m, 15m, 1d, 1wk).
+  - **Technical Indicators Suite**:
+    - **SMA (20)**: 20-period Simple Moving Average line overlay (sky-blue).
+    - **EMA (20)**: 20-period Exponential Moving Average line overlay (amber).
+    - **Volume Histogram**: Bullish/bearish volume bars aligned with price action.
+    - **RSI (14)**: Synchronized lower sub-chart pane with 70 overbought and 30 oversold horizontal threshold bands.
+    - **MACD (12, 26, 9)**: Synchronized lower sub-chart pane with MACD line, signal line, and color-coded momentum histogram.
+  - **Crosshair & Live OHLCV Banner**: Interactive cursor dynamically updating Open, High, Low, Close, and Volume at the top of the chart canvas.
+  - **Responsive Resizing**: Uses browser `ResizeObserver` for zero-glitch resizing across mobile, tablet, and desktop.
+- **Dedicated Today's Top Movers (`MarketMovers.jsx`)**:
+  - **Three Market-Cap Categories**: **Large Cap**, **Mid Cap**, and **Small Cap** with responsive segmented controls.
+  - **SEBI Classification Benchmark**:
+    - **Large Cap**: Top 100 companies by full market cap (> ₹50,000 Cr approx).
+    - **Mid Cap**: 101st – 250th companies (₹15,000 – ₹50,000 Cr approx).
+    - **Small Cap**: 251st company onwards (< ₹15,000 Cr approx).
+  - **Top Gainers & Top Losers Tabs**: Gainers sorted descending by positive % change; losers sorted ascending by largest negative % change.
+  - **Data Columns**: Company Logo, Name & Symbol, Latest Price, Absolute Price Change (`+₹` / `-₹`), % Change, Trading Volume, Market Cap (₹ Lakh Cr / ₹ Cr), Session Sparkline, and 1-click Chart Link.
+  - **Methodology & Market Status Badge**: Expandable SEBI rules drawer with last-updated timestamp and NSE market session indicator.
+  - **Mobile Responsive Design**: Clean desktop table and touch-friendly mobile cards.
 
 ---
 

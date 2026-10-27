@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import Card from "../components/ui/Card";
-import StockLogo from "../components/ui/StockLogo";
+import CompanyLogo from "../components/ui/CompanyLogo";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -151,9 +151,9 @@ function StockDetailsPage() {
         >
           {/* Left Title & Pricing with Logo */}
           <div className="flex items-start gap-4">
-            <StockLogo
+            <CompanyLogo
               symbol={displaySymbol}
-              name={stock?.longName || displaySymbol}
+              companyName={stock?.longName || displaySymbol}
               size={54}
               className="mt-0.5"
             />
@@ -230,9 +230,13 @@ function StockDetailsPage() {
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Left Chart Card */}
           <div className="xl:col-span-8 space-y-6">
-            <Card>
-              <StockDetailsChart symbol={nsSymbol} />
-            </Card>
+            <StockDetailsChart
+              symbol={nsSymbol}
+              stockName={stock?.name || stock?.shortName || displaySymbol}
+              currentPrice={stock?.price}
+              priceChange={stock?.change}
+              changeAmount={stock?.changeAmount}
+            />
 
             {/* Inline Quick Alert Trigger Card */}
             <div className="p-5 bg-gradient-to-r from-emerald-950/40 via-[#0e1626] to-[#0e1626] border border-emerald-500/20 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">

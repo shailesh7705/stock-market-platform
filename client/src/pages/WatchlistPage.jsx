@@ -22,7 +22,7 @@ import { getWatchlist, removeFromWatchlist, addToWatchlist } from "../services/w
 import { getLiveStocks, searchStocks } from "../services/stockService";
 import useWatchlistStore from "../store/watchlistStore";
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
-import StockLogo from "../components/ui/StockLogo";
+import CompanyLogo from "../components/ui/CompanyLogo";
 import toast from "react-hot-toast";
 
 function cleanSymbol(sym = "") {
@@ -288,7 +288,7 @@ function WatchlistPage() {
                   >
                     {/* Left: Symbol & Name with Logo */}
                     <div className="flex items-center gap-3.5 min-w-0 md:w-1/3">
-                      <StockLogo symbol={sym} name={stock.name} size={40} />
+                      <CompanyLogo symbol={sym} companyName={stock.name} size={40} />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">
