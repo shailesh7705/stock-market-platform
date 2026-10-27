@@ -1,3 +1,4 @@
+// client/src/components/ui/Card.jsx
 import { motion } from "framer-motion";
 
 function Card({ children, className = "", onClick, id, style }) {
@@ -6,17 +7,17 @@ function Card({ children, className = "", onClick, id, style }) {
       id={id}
       style={style}
       onClick={onClick}
-      whileHover={onClick ? { y: -2 } : undefined}
-      transition={{ duration: 0.2 }}
+      whileHover={onClick ? { y: -1 } : undefined}
+      transition={{ duration: 0.15 }}
       className={`
         rounded-2xl
-        border border-white/[0.07]
+        border border-white/[0.08]
         bg-[#0e1626]/90
-        shadow-[0_8px_30px_rgba(0,0,0,0.35)]
+        shadow-lg shadow-black/20
         p-5
-        backdrop-blur-xl
+        backdrop-blur-md
         w-full
-        transition-colors
+        transition-all
         ${className}
       `}
     >

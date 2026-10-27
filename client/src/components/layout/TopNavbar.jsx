@@ -3,24 +3,29 @@ import {
   Bell,
   LogOut,
   User,
-  ChevronRight,
   Clock,
   Menu,
   X,
-  Check,
   CheckCheck,
   TrendingUp,
   TrendingDown,
-  ShieldCheck,
+  LayoutDashboard,
+  Bookmark,
+  Activity,
+  Layers,
+  Search,
+  ChevronDown,
+  Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import StockSearch from "../search/StockSearch";
 import { getMarketIndices } from "../../services/marketService";
 import { getNotifications, markAllRead } from "../../services/notificationService";
 import useAlertStore from "../../store/alertStore";
 import useAuthStore from "../../store/authStore";
+import useWatchlistStore from "../../store/watchlistStore";
 import useNotificationStore from "../../store/notificationStore";
 
 function cleanName(name = "") {
@@ -36,22 +41,25 @@ function getInitials(name = "") {
     .join("");
 }
 
-function TopNavbar({ onOpenMobileMenu }) {
+export default function TopNavbar({ onOpenMobileMenu }) {
   const [marketData, setMarketData] = useState([]);
   const [marketOpen, setMarketOpen] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const { alerts } = useAlertStore();
+  const { watchlist } = useWatchlistStore();
   const { user } = useAuthStore();
   const { notifications, setNotifications } = useNotificationStore();
-  const navigate = useNavigate();
 
   const profileRef = useRef(null);
   const notifRef = useRef(null);
 
-  // Live clock
+  // Live IST Clock
   useEffect(() => {
     const tick = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(tick);
@@ -82,7 +90,6 @@ function TopNavbar({ onOpenMobileMenu }) {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-
     fetchNotes();
     const interval = setInterval(fetchNotes, 15000);
     return () => clearInterval(interval);
@@ -104,10 +111,10 @@ function TopNavbar({ onOpenMobileMenu }) {
         setMarketData(data);
       }
       const now = new Date();
-      // IST hours (market open: Mon-Fri 9:15 to 15:30)
+      // IST calculation (Mon-Fri 9:15 to 15:30 IST)
       const istHours = (now.getUTCHours() + 5 + Math.floor((now.getUTCMinutes() + 30) / 60)) % 24;
       const istMinutes = (now.getUTCMinutes() + 30) % 60;
-      const istDay = now.getUTCDay(); // 0 is Sunday, 6 is Saturday
+      const istDay = now.getUTCDay();
       const totalMin = istHours * 60 + istMinutes;
       const isWeekday = istDay >= 1 && istDay <= 5;
       const isOpen = isWeekday && totalMin >= 9 * 60 + 15 && totalMin <= 15 * 60 + 30;
@@ -144,41 +151,139 @@ function TopNavbar({ onOpenMobileMenu }) {
   const displayName = cleanName(user?.name || "Investor");
   const initials = getInitials(user?.name || "") || "IP";
   const unreadNotesCount = notifications?.filter((n) => !n.read).length || 0;
+  const activeAlertsCount = alerts?.filter((a) => !a.triggered).length || 0;
+  const watchlistCount = watchlist?.length || 0;
+
+  // Primary navigation items
+  const navLinks = [
+    {
+      label: "Dashboard",
+      path: "/dashboard",
+      icon: LayoutDashboard,
+      isActive: location.pathname === "/dashboard",
+    },
+    {
+      label: "Watchlist",
+      path: "/watchlist",
+      icon: Bookmark,
+      count: watchlistCount,
+      isActive: location.pathname === "/watchlist",
+    },
+    {
+      label: "Alerts",
+      path: "/alerts",
+      icon: Bell,
+      count: activeAlertsCount,
+      isActive: location.pathname === "/alerts",
+    },
+    {
+      label: "Movers",
+      path: "/dashboard#market-movers",
+      icon: TrendingUp,
+      action: () => {
+        if (location.pathname === "/dashboard") {
+          document.getElementById("market-movers")?.scrollIntoView({ behavior: "smooth" });
+        } else {
+          navigate("/dashboard");
+          setTimeout(() => {
+            document.getElementById("market-movers")?.scrollIntoView({ behavior: "smooth" });
+          }, 200);
+        }
+      },
+      isActive: false,
+    },
+  ];
 
   return (
-    <header className="sticky top-0 z-40 h-16 border-b border-white/[0.07] bg-[#0b1120]/95 backdrop-blur-xl shrink-0 px-4 lg:px-6">
-      <div className="h-full flex items-center justify-between gap-4">
-        {/* Left Side: Mobile Menu Button & Search */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          {/* Mobile hamburger button */}
+    <header className="sticky top-0 z-50 h-16 w-full border-b border-white/[0.08] bg-[#090e17]/95 backdrop-blur-xl shrink-0 px-4 lg:px-6">
+      <div className="h-full max-w-7xl mx-auto flex items-center justify-between gap-4">
+        {/* ── Left: Brand Logo & Navigation Links ── */}
+        <div className="flex items-center gap-6 min-w-0">
+          {/* Mobile hamburger toggle */}
           <button
             onClick={onOpenMobileMenu}
-            className="lg:hidden w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white shrink-0"
-            title="Open navigation menu"
+            className="lg:hidden w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white shrink-0 transition-colors"
+            title="Open menu"
           >
             <Menu size={18} />
           </button>
 
-          {/* Search Box */}
-          <div className="w-full max-w-xs md:max-w-sm">
-            <StockSearch />
-          </div>
+          {/* Platform Brand Logo */}
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2.5 group shrink-0 select-none"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/35 transition-all">
+              <div className="w-full h-full bg-[#090e17] rounded-[10px] flex items-center justify-center">
+                <Activity size={18} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-lg font-black text-white tracking-tight group-hover:text-emerald-400 transition-colors">
+                StockPulse
+              </span>
+              <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                PRO
+              </span>
+            </div>
+          </Link>
 
+          {/* Desktop Navigation Links (TradingView / Zerodha Inspired) */}
+          <nav className="hidden lg:flex items-center gap-1 pl-4 border-l border-white/[0.08]">
+            {navLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => (item.action ? item.action() : navigate(item.path))}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all select-none ${
+                    item.isActive
+                      ? "bg-white/10 text-white shadow-xs border border-white/10"
+                      : "text-gray-400 hover:text-white hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <Icon size={14} className={item.isActive ? "text-emerald-400" : "text-gray-400"} />
+                  <span>{item.label}</span>
+                  {item.count > 0 && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                        item.isActive
+                          ? "bg-emerald-500 text-black"
+                          : "bg-white/10 text-gray-300"
+                      }`}
+                    >
+                      {item.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* ── Center: Search Bar ── */}
+        <div className="flex-1 max-w-xs md:max-w-sm lg:max-w-md mx-2">
+          <StockSearch />
+        </div>
+
+        {/* ── Right: Market Status, Ticker, Watchlist Shortcut & Profile ── */}
+        <div className="flex items-center gap-3 shrink-0">
           {/* Live Market Indices Ticker (Desktop) */}
-          <div className="hidden xl:flex items-center gap-4 pl-3 border-l border-white/[0.08] min-w-0">
-            {marketData.map((market) => (
-              <div key={market.symbol} className="flex items-center gap-2">
-                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                  {market.name || (market.symbol === "^NSEI" ? "NIFTY 50" : "SENSEX")}
+          <div className="hidden xl:flex items-center gap-3 pr-2 border-r border-white/[0.08]">
+            {marketData.slice(0, 2).map((market) => (
+              <div
+                key={market.symbol}
+                className="flex items-center gap-1.5 bg-[#0e1626] border border-white/5 px-2.5 py-1 rounded-xl font-mono text-xs"
+              >
+                <span className="text-[10px] text-gray-400 font-sans font-bold">
+                  {market.name === "NIFTY 50" ? "NIFTY" : "SENSEX"}
                 </span>
-                <span className="text-[13px] font-extrabold text-white">
-                  {market.price ? market.price.toLocaleString("en-IN") : "—"}
+                <span className="text-white font-bold">
+                  {market.price ? Number(market.price).toLocaleString("en-IN") : "—"}
                 </span>
                 <span
-                  className={`text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
-                    market.positive
-                      ? "text-emerald-400 bg-emerald-500/10"
-                      : "text-rose-400 bg-rose-500/10"
+                  className={`text-[10px] font-bold flex items-center gap-0.5 ${
+                    market.positive ? "text-emerald-400" : "text-rose-400"
                   }`}
                 >
                   {market.positive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -188,32 +293,40 @@ function TopNavbar({ onOpenMobileMenu }) {
               </div>
             ))}
 
-            {/* Market Open Status Pill */}
-            <div className="flex items-center gap-1.5 pl-2 border-l border-white/[0.08]">
+            {/* NSE Live / Closed Status */}
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] font-bold">
               <span
                 className={`w-2 h-2 rounded-full ${
                   marketOpen ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
                 }`}
               />
-              <span
-                className={`text-[11px] font-bold ${
-                  marketOpen ? "text-emerald-400" : "text-gray-400"
-                }`}
-              >
-                {marketOpen ? "NSE Live" : "NSE Closed"}
+              <span className={marketOpen ? "text-emerald-400" : "text-gray-400"}>
+                {marketOpen ? "NSE Live" : "Closed"}
               </span>
             </div>
 
-            {/* Live Clock IST */}
-            <div className="flex items-center gap-1 text-[11px] text-gray-400 font-mono pl-2">
-              <Clock size={12} className="text-gray-500" />
-              <span>{formattedTime} IST</span>
+            {/* IST Clock */}
+            <div className="flex items-center gap-1 text-[11px] text-gray-400 font-mono">
+              <Clock size={11} className="text-gray-500" />
+              <span>{formattedTime}</span>
             </div>
           </div>
-        </div>
 
-        {/* Right Side: Alerts/Notification Bell & Profile */}
-        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Quick Watchlist Shortcut Pill */}
+          <Link
+            to="/watchlist"
+            className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#0e1626] hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-300 hover:text-white transition-all"
+            title="My Watchlist"
+          >
+            <Bookmark size={14} className="text-blue-400" />
+            <span className="hidden md:inline">Watchlist</span>
+            {watchlistCount > 0 && (
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 font-mono">
+                {watchlistCount}
+              </span>
+            )}
+          </Link>
+
           {/* Notifications Dropdown */}
           <div className="relative" ref={notifRef}>
             <button
@@ -221,12 +334,12 @@ function TopNavbar({ onOpenMobileMenu }) {
                 setShowNotifications(!showNotifications);
                 setShowProfileMenu(false);
               }}
-              className="relative w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 transition-all"
+              className="relative w-9 h-9 rounded-xl bg-[#0e1626] border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 transition-all"
               title="Notifications"
             >
               <Bell size={16} />
               {unreadNotesCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-emerald-500 text-black text-[10px] font-extrabold flex items-center justify-center border border-[#0b1120]">
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-emerald-500 text-black text-[10px] font-black flex items-center justify-center border-2 border-[#090e17]">
                   {unreadNotesCount > 9 ? "9+" : unreadNotesCount}
                 </span>
               )}
@@ -235,11 +348,11 @@ function TopNavbar({ onOpenMobileMenu }) {
             <AnimatePresence>
               {showNotifications && (
                 <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-12 w-80 sm:w-96 bg-[#0e1626] border border-white/10 rounded-2xl shadow-2xl shadow-black/80 z-50 overflow-hidden"
+                  className="absolute right-0 top-12 w-80 sm:w-96 bg-[#0e1626] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 z-50 overflow-hidden backdrop-blur-xl"
                 >
                   <div className="px-4 py-3 border-b border-white/[0.08] flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -263,14 +376,14 @@ function TopNavbar({ onOpenMobileMenu }) {
                   <div className="max-h-80 overflow-y-auto divide-y divide-white/[0.04]">
                     {!notifications || notifications.length === 0 ? (
                       <div className="p-6 text-center text-xs text-gray-500">
-                        No notifications yet. Alerts will appear here when triggered.
+                        No notifications yet. Price alerts will trigger here automatically.
                       </div>
                     ) : (
                       notifications.slice(0, 10).map((note) => (
                         <div
                           key={note._id}
                           className={`p-3.5 transition-colors ${
-                            note.read ? "bg-transparent opacity-75" : "bg-emerald-500/[0.05]"
+                            note.read ? "bg-transparent opacity-75" : "bg-emerald-500/[0.06]"
                           }`}
                         >
                           <div className="flex items-start gap-2.5">
@@ -296,13 +409,13 @@ function TopNavbar({ onOpenMobileMenu }) {
                     )}
                   </div>
 
-                  <div className="p-2 border-t border-white/[0.08] text-center bg-[#070d18]">
+                  <div className="p-2.5 border-t border-white/[0.08] text-center bg-[#090e17]">
                     <Link
                       to="/alerts"
                       onClick={() => setShowNotifications(false)}
-                      className="text-[12px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors block py-1"
+                      className="text-[12px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors block py-0.5"
                     >
-                      Manage All Alerts →
+                      Manage Price Alerts →
                     </Link>
                   </div>
                 </motion.div>
@@ -310,35 +423,38 @@ function TopNavbar({ onOpenMobileMenu }) {
             </AnimatePresence>
           </div>
 
-          {/* User Profile Dropdown */}
+          {/* User Profile Menu */}
           <div className="relative" ref={profileRef}>
             <button
               onClick={() => {
                 setShowProfileMenu(!showProfileMenu);
                 setShowNotifications(false);
               }}
-              className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black font-extrabold text-[12px] shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all"
+              className="flex items-center gap-2 p-1 pr-2 rounded-xl bg-[#0e1626] hover:bg-white/10 border border-white/10 transition-all select-none"
             >
-              {initials}
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black font-black text-xs shadow-md shadow-emerald-500/20">
+                {initials}
+              </div>
+              <ChevronDown size={13} className="text-gray-400 hidden sm:block" />
             </button>
 
             <AnimatePresence>
               {showProfileMenu && (
                 <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-12 w-64 bg-[#0e1626] border border-white/10 rounded-2xl shadow-2xl shadow-black/80 z-50 overflow-hidden"
+                  className="absolute right-0 top-12 w-64 bg-[#0e1626] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 z-50 overflow-hidden backdrop-blur-xl"
                 >
                   {/* User Profile Header */}
                   <div className="p-4 border-b border-white/[0.08]">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black font-extrabold text-sm shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black font-black text-sm shrink-0">
                         {initials}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[14px] font-bold text-white truncate leading-tight">
+                        <p className="text-[13px] font-bold text-white truncate leading-tight">
                           {displayName}
                         </p>
                         <p className="text-[11px] text-gray-400 truncate mt-0.5">
@@ -348,22 +464,29 @@ function TopNavbar({ onOpenMobileMenu }) {
                     </div>
                   </div>
 
-                  {/* Menu Links */}
+                  {/* Summary Stats Pill in Dropdown */}
+                  <div className="grid grid-cols-2 gap-1 p-2 bg-[#090e17] border-b border-white/[0.06] text-center">
+                    <div className="p-1.5 rounded-lg bg-white/[0.02]">
+                      <p className="text-[10px] text-gray-500 uppercase font-bold">Watchlist</p>
+                      <p className="text-xs font-mono font-bold text-white mt-0.5">{watchlistCount} stocks</p>
+                    </div>
+                    <div className="p-1.5 rounded-lg bg-white/[0.02]">
+                      <p className="text-[10px] text-gray-500 uppercase font-bold">Active Alerts</p>
+                      <p className="text-xs font-mono font-bold text-amber-400 mt-0.5">{activeAlertsCount} active</p>
+                    </div>
+                  </div>
+
+                  {/* Navigation Links in Profile Menu */}
                   <div className="p-2 space-y-1">
                     <button
                       onClick={() => {
-                        navigate("/alerts");
+                        navigate("/dashboard");
                         setShowProfileMenu(false);
                       }}
-                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[13px] text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-white/5 transition-all"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <Bell size={15} className="text-amber-400" />
-                        <span>Price Alerts</span>
-                      </div>
-                      <span className="text-[11px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
-                        {alerts?.length || 0}
-                      </span>
+                      <LayoutDashboard size={14} className="text-emerald-400" />
+                      <span>Trading Dashboard</span>
                     </button>
 
                     <button
@@ -371,23 +494,31 @@ function TopNavbar({ onOpenMobileMenu }) {
                         navigate("/watchlist");
                         setShowProfileMenu(false);
                       }}
-                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[13px] text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-white/5 transition-all"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <TrendingUp size={15} className="text-emerald-400" />
-                        <span>My Watchlist</span>
-                      </div>
-                      <ChevronRight size={14} className="text-gray-500" />
+                      <Bookmark size={14} className="text-blue-400" />
+                      <span>My Watchlist</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        navigate("/alerts");
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                    >
+                      <Bell size={14} className="text-amber-400" />
+                      <span>Price Alerts</span>
                     </button>
                   </div>
 
-                  {/* Logout Action */}
+                  {/* Logout Button */}
                   <div className="p-2 border-t border-white/[0.08]">
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium text-rose-400 hover:bg-rose-500/10 transition-all"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-all"
                     >
-                      <LogOut size={15} />
+                      <LogOut size={14} />
                       <span>Sign Out</span>
                     </button>
                   </div>
@@ -400,5 +531,3 @@ function TopNavbar({ onOpenMobileMenu }) {
     </header>
   );
 }
-
-export default TopNavbar;

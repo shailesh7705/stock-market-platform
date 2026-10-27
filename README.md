@@ -136,6 +136,23 @@
 
 ---
 
+### Ticket 8: Premium Global Navbar & Unified UI Redesign (TradingView, Zerodha, Groww & Robinhood Inspired)
+- **Unified Global Top Navbar (`TopNavbar.jsx`)**:
+  - **Professional Platform Brand**: Clean geometric vector pulse icon with cyan-to-emerald gradient badge, bold modern typography, and `PRO` verification pill.
+  - **Integrated Primary Navigation**: Desktop links for **Dashboard**, **Watchlist** (with active count pill), **Price Alerts** (with monitoring count pill), and **Movers**.
+  - **Embedded Real-Time Search**: Fast `StockSearch` with 2,364 NSE equity index and corporate logos.
+  - **Live Indices Ticker**: Compact NIFTY 50 and SENSEX pills with live prices, percentage change indicators, and NSE Open/Closed market status badge with IST clock.
+  - **Quick Watchlist Shortcut**: Dedicated 1-click bookmark shortcut button with count badge.
+  - **Rich Notification Drawer**: Refined notification bell with unread badge counter, alert hit history, and "Mark all as read" action.
+  - **Profile Menu**: User avatar with initials, summary stats (active alerts, tracked assets), and sign-out button.
+- **Expansive Full-Width Layout (`AppLayout.jsx`)**:
+  - Removed desktop sidebar constraints to provide full horizontal breathing room for TradingView candlestick charts, wide tables, and analytics.
+  - Retained slide-in mobile navigation drawer (`Sidebar.jsx`) for complete responsiveness on smartphones and tablets.
+- **Polished Visual Tokens (`Card.jsx` & Design System)**:
+  - Sophisticated neutral dark theme (`#090e17` canvas, `#0e1626` cards), subtle borders (`rgba(255,255,255,0.08)`), high-contrast typography, and smooth micro-interactions.
+
+---
+
 ## ⚙️ Environment Variables
 
 ### Server (`server/.env` & Render Environment Variables)

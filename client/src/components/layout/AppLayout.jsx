@@ -8,11 +8,9 @@ function AppLayout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-[#080d1a] text-white overflow-hidden">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:block h-full">
-        <Sidebar />
-      </aside>
+    <div className="min-h-screen bg-[#090e17] text-slate-100 flex flex-col selection:bg-emerald-500/30 selection:text-emerald-300">
+      {/* Global Top Navbar */}
+      <TopNavbar onOpenMobileMenu={() => setMobileMenuOpen(true)} />
 
       {/* Mobile Drawer */}
       <AnimatePresence>
@@ -23,13 +21,13 @@ function AppLayout({ children }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="lg:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+              className="lg:hidden fixed inset-0 bg-black/75 backdrop-blur-xs z-50"
             />
             <motion.div
-              initial={{ x: -280 }}
+              initial={{ x: -300 }}
               animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
+              exit={{ x: -300 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
               className="lg:hidden fixed left-0 top-0 bottom-0 z-50 w-72 shadow-2xl"
             >
               <Sidebar onCloseMobile={() => setMobileMenuOpen(false)} />
@@ -38,14 +36,10 @@ function AppLayout({ children }) {
         )}
       </AnimatePresence>
 
-      {/* Main Content Area */}
-      <div id="dashboard-container" className="flex-1 flex flex-col h-full overflow-hidden">
-        <TopNavbar onOpenMobileMenu={() => setMobileMenuOpen(true)} />
-
-        <main className="flex-1 overflow-y-auto px-4 lg:px-8 py-6">
-          {children}
-        </main>
-      </div>
+      {/* Main Content Area — Centered, Responsive, Full-Width Breathing Room */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {children}
+      </main>
     </div>
   );
 }

@@ -8,6 +8,8 @@ import {
   Search,
   LogOut,
   Zap,
+  Activity,
+  X,
   ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -93,27 +95,40 @@ function Sidebar({ onCloseMobile }) {
   };
 
   return (
-    <div className="w-64 shrink-0 h-full bg-[#0b1120] border-r border-white/[0.07] flex flex-col justify-between p-4 overflow-y-auto">
+    <div className="w-72 shrink-0 h-full bg-[#0b1120] border-r border-white/[0.08] flex flex-col justify-between p-5 overflow-y-auto">
       <div>
-        {/* Brand Logo */}
-        <div
-          onClick={() => {
-            navigate("/dashboard");
-            if (onCloseMobile) onCloseMobile();
-          }}
-          className="flex items-center gap-3 px-3 py-3 mb-6 cursor-pointer group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-            <Zap size={18} className="fill-current" />
+        {/* Brand Logo & Close Button */}
+        <div className="flex items-center justify-between mb-6">
+          <div
+            onClick={() => {
+              navigate("/dashboard");
+              if (onCloseMobile) onCloseMobile();
+            }}
+            className="flex items-center gap-3 cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+              <div className="w-full h-full bg-[#090e17] rounded-[10px] flex items-center justify-center">
+                <Activity size={18} className="text-emerald-400" />
+              </div>
+            </div>
+            <div>
+              <span className="text-[17px] font-black text-white tracking-tight leading-none block">
+                StockPulse
+              </span>
+              <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase mt-0.5 block">
+                NSE Intelligent Terminal
+              </span>
+            </div>
           </div>
-          <div>
-            <span className="text-[17px] font-extrabold text-white tracking-tight leading-none block">
-              StockPulse
-            </span>
-            <span className="text-[10px] font-semibold text-emerald-400 tracking-wider uppercase mt-0.5 block">
-              NSE Alerts Engine
-            </span>
-          </div>
+
+          {onCloseMobile && (
+            <button
+              onClick={onCloseMobile}
+              className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
 
         {/* Navigation Items */}
