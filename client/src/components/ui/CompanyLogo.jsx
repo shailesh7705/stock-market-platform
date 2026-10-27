@@ -1,60 +1,58 @@
 // client/src/components/ui/CompanyLogo.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
-// ─── Curated High-Resolution Corporate Logos for Indian Equities ───────────────
-const CURATED_LOGOS = {
-  RELIANCE: "https://upload.wikimedia.org/wikipedia/en/thumb/9/99/Reliance_Industries_Logo.svg/512px-Reliance_Industries_Logo.svg.png",
-  TCS: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Tata_Consultancy_Services_Logo.svg/512px-Tata_Consultancy_Services_Logo.svg.png",
-  INFY: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Infosys_logo.svg/512px-Infosys_logo.svg.png",
-  HDFCBANK: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/HDFC_Bank_Logo.svg/512px-HDFC_Bank_Logo.svg.png",
-  ICICIBANK: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/ICICI_Bank_Logo.svg/512px-ICICI_Bank_Logo.svg.png",
-  SBIN: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/SBI-logo.svg/512px-SBI-logo.svg.png",
-  BHARTIARTL: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Airtel_logo.svg/512px-Airtel_logo.svg.png",
-  ITC: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/ITC_Limited_Logo.svg/512px-ITC_Limited_Logo.svg.png",
-  LT: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/L%26T.png/512px-L%26T.png",
-  HINDUNILVR: "https://upload.wikimedia.org/wikipedia/en/thumb/e/e4/Hindustan_Unilever_Logo.svg/512px-Hindustan_Unilever_Logo.svg.png",
-  TATAMOTORS: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Tata_Motors_Logo.svg/512px-Tata_Motors_Logo.svg.png",
-  MARUTI: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/Maruti_Suzuki_logo.svg/512px-Maruti_Suzuki_logo.svg.png",
-  WIPRO: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Wipro_Logo_RGB.svg/512px-Wipro_Logo_RGB.svg.png",
-  BAJFINANCE: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Bajaj_Finserv_Logo.svg/512px-Bajaj_Finserv_Logo.svg.png",
-  TITAN: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Titan_Company_Logo.svg/512px-Titan_Company_Logo.svg.png",
-  NTPC: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/NTPC_Logo.svg/512px-NTPC_Logo.svg.png",
-  ONGC: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/ONGC_Logo.svg/512px-ONGC_Logo.svg.png",
-  AXISBANK: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Axis_Bank_logo.svg/512px-Axis_Bank_logo.svg.png",
-  KOTAKBANK: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Kotak_Mahindra_Bank_logo.svg/512px-Kotak_Mahindra_Bank_logo.svg.png",
-  ADANIENT: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Adani_logo.svg/512px-Adani_logo.svg.png",
-  SUNPHARMA: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Sun_Pharma_Logo.svg/512px-Sun_Pharma_Logo.svg.png",
-  ZOMATO: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Zomato_logo.png/512px-Zomato_logo.png",
-  PAYTM: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Paytm_Logo_%28standalone%29.svg/512px-Paytm_Logo_%28standalone%29.svg.png",
-};
-
-// ─── Clean Domain Mappings for Google 128px Favicons ─────────────────────────
+// ─── Comprehensive Domain Mapping for Top Indian Equities (NSE/BSE) ───────────
 const DOMAIN_MAP = {
+  // NIFTY 50 / Large Cap
   RELIANCE: "ril.com",
   TCS: "tcs.com",
   INFY: "infosys.com",
   HDFCBANK: "hdfcbank.com",
   ICICIBANK: "icicibank.com",
   SBIN: "sbi.co.in",
-  BAJFINANCE: "bajajfinserv.in",
-  WIPRO: "wipro.com",
-  AXISBANK: "axisbank.com",
+  BHARTIARTL: "airtel.in",
+  ITC: "itcportal.com",
   LT: "larsentoubro.com",
-  KOTAKBANK: "kotak.com",
   HINDUNILVR: "hul.co.in",
+  BAJFINANCE: "bajajfinserv.in",
+  BAJAJFINSV: "bajajfinserv.in",
   MARUTI: "marutisuzuki.com",
   TITAN: "titancompany.in",
-  NESTLEIND: "nestle.in",
-  TECHM: "techmahindra.com",
-  HCLTECH: "hcltech.com",
-  NTPC: "ntpc.co.in",
-  ONGC: "ongcindia.com",
+  SUNPHARMA: "sunpharma.com",
   TATAMOTORS: "tatamotors.com",
   TATASTEEL: "tatasteel.com",
   TATAPOWER: "tatapower.com",
-  SUNPHARMA: "sunpharma.com",
-  BHARTIARTL: "airtel.in",
-  ITC: "itcportal.com",
+  NTPC: "ntpc.co.in",
+  ONGC: "ongcindia.com",
+  AXISBANK: "axisbank.com",
+  KOTAKBANK: "kotak.com",
+  ADANIENT: "adani.com",
+  ADANIPORTS: "adaniports.com",
+  ADANIGREEN: "adanigreen.com",
+  WIPRO: "wipro.com",
+  HCLTECH: "hcltech.com",
+  TECHM: "techmahindra.com",
+  NESTLEIND: "nestle.in",
+  ASIANPAINT: "asianpaints.com",
+  ULTRACEMCO: "ultratechcement.com",
+  POWERGRID: "powergridindia.com",
+  COALINDIA: "coalindia.in",
+  DRREDDY: "drreddys.com",
+  CIPLA: "cipla.com",
+  DIVISLAB: "divislaboratories.com",
+  BPCL: "bharatpetroleum.com",
+  IOC: "iocl.com",
+  GRASIM: "grasim.com",
+  HEROMOTOCO: "heromotocorp.com",
+  BAJAJ_AUTO: "bajajauto.com",
+  EICHERMOT: "eichergroup.com",
+  APOLLOHOSP: "apollohospitals.com",
+  JSWSTEEL: "jsw.in",
+  HINDALCO: "hindalco.com",
+  VEDL: "vedanta.com",
+  INDUSINDBK: "indusind.com",
+
+  // Mid Cap
   POLYCAB: "polycab.com",
   PERSISTENT: "persistent.com",
   COFORGE: "coforge.com",
@@ -70,6 +68,28 @@ const DOMAIN_MAP = {
   BHARATFORG: "bharatforge.com",
   MRF: "mrftyres.com",
   PAGEIND: "pageindustries.com",
+  TATACOMM: "tatacommunications.com",
+  DALBHARAT: "dalmiabharat.com",
+  AUROPHARMA: "aurobindo.com",
+  CONCOR: "concorindia.co.in",
+  ESCORTS: "escortsgroup.com",
+  LTIM: "ltimindtree.com",
+  TATAELXSI: "tataelxsi.com",
+  MUTHOOTFIN: "muthootfinance.com",
+  IRCTC: "irctc.co.in",
+  INDIGO: "goindigo.in",
+  BEL: "bel-india.in",
+  HAL: "hal-india.co.in",
+  SIEMENS: "siemens.co.in",
+  ABB: "abb.co.in",
+  HAVELLS: "havells.com",
+  PIDILITIND: "pidilite.com",
+  BRITANNIA: "britannia.co.in",
+  DABUR: "dabur.com",
+  MARICO: "marico.com",
+  GODREJCP: "godrejcp.com",
+
+  // Small Cap & Digital
   CDSL: "cdslindia.com",
   SUZLON: "suzlon.com",
   KEC: "kecrpg.com",
@@ -86,6 +106,16 @@ const DOMAIN_MAP = {
   CENTRALBK: "centralbankofindia.co.in",
   RAILTEL: "railtelindia.com",
   CEAT: "ceat.com",
+  ZOMATO: "zomato.com",
+  PAYTM: "paytm.com",
+  NYKAA: "nykaa.com",
+  DMART: "dmart.in",
+  TRENT: "trent.in",
+  POLICYBZR: "policybazaar.com",
+  IRFC: "irfc.nic.in",
+  ROUTE: "routemobile.com",
+  RADICO: "radicokhaitan.com",
+  LEMONTREE: "lemontreehotels.com",
 };
 
 const GRADIENTS = [
@@ -100,7 +130,10 @@ const GRADIENTS = [
 
 function getInitials(name = "", symbol = "") {
   if (name && name.length > 2 && !name.includes(".NS")) {
-    const parts = name.replace(/limited|ltd|corp|corporation|bank|india/gi, "").trim().split(/\s+/);
+    const parts = name
+      .replace(/limited|ltd|corp|corporation|bank|india/gi, "")
+      .trim()
+      .split(/\s+/);
     if (parts.length >= 2 && parts[0] && parts[1]) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
@@ -122,9 +155,9 @@ function hashString(str = "") {
  * Accepts company name, ticker symbol, and optional logo source.
  * Multi-tier resolution:
  * 1. Explicit `logoSource` / `src` prop
- * 2. Curated High-Res Corporate SVG/PNG
- * 3. Tickertape CDN
- * 4. Google 128px Favicon via domain map
+ * 2. Unavatar official vector/high-res CDN (`https://unavatar.io/${domain}?fallback=false`)
+ * 3. Google 128px High-Res Favicon (`https://www.google.com/s2/favicons?domain=${domain}&sz=128`)
+ * 4. Clearbit Logo CDN (`https://logo.clearbit.com/${domain}`)
  * 5. Deterministic Initials Badge
  */
 export default function CompanyLogo({
@@ -143,17 +176,19 @@ export default function CompanyLogo({
   const finalName = companyName || name || cleanTicker;
   const directSrc = logoSource || src;
 
-  // Ordered list of candidate image sources
+  // Build candidate URL list based on domain mapping
   const candidateUrls = useMemo(() => {
     const urls = [];
     if (directSrc) urls.push(directSrc);
-    if (CURATED_LOGOS[cleanTicker]) urls.push(CURATED_LOGOS[cleanTicker]);
-    urls.push(`https://assets.tickertape.in/stock-logos/${cleanTicker}.png`);
-    urls.push(`https://assets.tickertape.in/images/logos/${cleanTicker}.png`);
 
-    const domain = DOMAIN_MAP[cleanTicker];
+    const domain = DOMAIN_MAP[cleanTicker] || (cleanTicker ? `${cleanTicker.toLowerCase()}.com` : null);
     if (domain) {
+      // 1. Unavatar returns crisp SVG / high-res PNG for top companies
+      urls.push(`https://unavatar.io/${domain}?fallback=false`);
+      // 2. Google Favicon (128px high resolution)
       urls.push(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+      // 3. Clearbit CDN
+      urls.push(`https://logo.clearbit.com/${domain}`);
     }
 
     return urls;
@@ -161,6 +196,12 @@ export default function CompanyLogo({
 
   const [candidateIndex, setCandidateIndex] = useState(0);
   const [hasFailedAll, setHasFailedAll] = useState(false);
+
+  // Reset when symbol changes
+  useEffect(() => {
+    setCandidateIndex(0);
+    setHasFailedAll(false);
+  }, [cleanTicker, directSrc]);
 
   const currentUrl = candidateUrls[candidateIndex];
 
@@ -174,7 +215,7 @@ export default function CompanyLogo({
 
   const initials = useMemo(() => getInitials(finalName, cleanTicker), [finalName, cleanTicker]);
   const gradientClass = GRADIENTS[hashString(cleanTicker) % GRADIENTS.length];
-  const borderRadius = Math.max(8, Math.round(size * 0.26));
+  const borderRadius = Math.max(8, Math.round(size * 0.28));
   const innerPad = Math.max(3, Math.round(size * 0.12));
 
   if (hasFailedAll || !currentUrl) {
@@ -197,7 +238,7 @@ export default function CompanyLogo({
 
   return (
     <div
-      className={`relative shrink-0 flex items-center justify-center overflow-hidden bg-white shadow-sm border border-white/20 select-none ${className}`}
+      className={`relative shrink-0 flex items-center justify-center overflow-hidden bg-white shadow-xs border border-white/20 select-none ${className}`}
       style={{
         width: size,
         height: size,
@@ -207,13 +248,13 @@ export default function CompanyLogo({
       title={`${finalName} (${cleanTicker})`}
     >
       <img
+        key={`${cleanTicker}-${candidateIndex}`}
         src={currentUrl}
         alt={alt || `${cleanTicker} logo`}
         onError={handleImgError}
         className="w-full h-full object-contain filter drop-shadow-xs"
         loading="lazy"
         decoding="async"
-        crossOrigin="anonymous"
       />
     </div>
   );
