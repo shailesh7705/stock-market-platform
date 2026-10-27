@@ -1,10 +1,27 @@
-import { Bell, LogOut, User, Settings, ChevronRight, Clock } from "lucide-react";
+// client/src/components/layout/TopNavbar.jsx
+import {
+  Bell,
+  LogOut,
+  User,
+  ChevronRight,
+  Clock,
+  Menu,
+  X,
+  Check,
+  CheckCheck,
+  TrendingUp,
+  TrendingDown,
+  ShieldCheck,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import StockSearch from "../search/StockSearch";
 import { getMarketIndices } from "../../services/marketService";
+import { getNotifications, markAllRead } from "../../services/notificationService";
 import useAlertStore from "../../store/alertStore";
 import useAuthStore from "../../store/authStore";
+import useNotificationStore from "../../store/notificationStore";
 
 function cleanName(name = "") {
   return name.replace(/\.\s*[A-Z]$/, "").trim();
@@ -19,31 +36,20 @@ function getInitials(name = "") {
     .join("");
 }
 
-// Deterministic avatar gradient from name
-const GRADIENTS = [
-  ["from-emerald-500", "to-teal-600"],
-  ["from-violet-500", "to-purple-600"],
-  ["from-blue-500",   "to-cyan-600"],
-  ["from-rose-500",   "to-pink-600"],
-  ["from-amber-500",  "to-orange-600"],
-];
-function avatarGradient(name = "") {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++)
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  const [from, to] = GRADIENTS[Math.abs(hash) % GRADIENTS.length];
-  return `bg-gradient-to-br ${from} ${to}`;
-}
-
-function TopNavbar() {
+function TopNavbar({ onOpenMobileMenu }) {
   const [marketData, setMarketData] = useState([]);
   const [marketOpen, setMarketOpen] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showAlerts, setShowAlerts] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
   const { alerts } = useAlertStore();
   const { user } = useAuthStore();
+  const { notifications, setNotifications } = useNotificationStore();
+  const navigate = useNavigate();
+
   const profileRef = useRef(null);
+  const notifRef = useRef(null);
 
   // Live clock
   useEffect(() => {
@@ -51,290 +57,347 @@ function TopNavbar() {
     return () => clearInterval(tick);
   }, []);
 
-  // Close dropdown on outside click
+  // Close menus on outside click
   useEffect(() => {
     const handler = (e) => {
-      if (profileRef.current && !profileRef.current.contains(e.target))
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
         setShowProfileMenu(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setShowNotifications(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Fetch market indices
   useEffect(() => {
     fetchMarketData();
-    const interval = setInterval(fetchMarketData, 15000);
+    const interval = setInterval(fetchMarketData, 20000);
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch notifications
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    fetchNotes();
+    const interval = setInterval(fetchNotes, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchNotes = async () => {
+    try {
+      const data = await getNotifications();
+      if (Array.isArray(data)) setNotifications(data);
+    } catch {
+      // Ignore background error
+    }
+  };
 
   const fetchMarketData = async () => {
     try {
       const data = await getMarketIndices();
-      setMarketData(data);
+      if (Array.isArray(data) && data.length > 0) {
+        setMarketData(data);
+      }
       const now = new Date();
-      const cur = now.getHours() * 60 + now.getMinutes();
-      setMarketOpen(cur >= 9 * 60 + 15 && cur <= 15 * 60 + 30);
-    } catch (error) {
-      console.log(error);
+      // IST hours (market open: Mon-Fri 9:15 to 15:30)
+      const istHours = (now.getUTCHours() + 5 + Math.floor((now.getUTCMinutes() + 30) / 60)) % 24;
+      const istMinutes = (now.getUTCMinutes() + 30) % 60;
+      const istDay = now.getUTCDay(); // 0 is Sunday, 6 is Saturday
+      const totalMin = istHours * 60 + istMinutes;
+      const isWeekday = istDay >= 1 && istDay <= 5;
+      const isOpen = isWeekday && totalMin >= 9 * 60 + 15 && totalMin <= 15 * 60 + 30;
+      setMarketOpen(isOpen);
+    } catch (err) {
+      console.error(err);
     }
   };
 
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead();
+      const updated = (notifications || []).map((n) => ({ ...n, read: true }));
+      setNotifications(updated);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/";
+  };
+
   const formattedTime = currentTime.toLocaleTimeString("en-IN", {
-    hour: "2-digit", minute: "2-digit", hour12: true,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
   });
 
-  const displayName  = cleanName(user?.name || "");
-  const initials     = getInitials(user?.name || "") || "U";
-  const gradient     = avatarGradient(user?.name || "");
-  const triggeredCnt = alerts?.filter((a) => a.triggered).length || 0;
+  const displayName = cleanName(user?.name || "Investor");
+  const initials = getInitials(user?.name || "") || "IP";
+  const unreadNotesCount = notifications?.filter((n) => !n.read).length || 0;
 
   return (
-    <motion.div
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="sticky top-0 z-50 h-16 border-b border-white/5
-                 bg-[#0d1523]/95 backdrop-blur-xl shrink-0"
-    >
-      <div className="h-full px-6 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 h-16 border-b border-white/[0.07] bg-[#0b1120]/95 backdrop-blur-xl shrink-0 px-4 lg:px-6">
+      <div className="h-full flex items-center justify-between gap-4">
+        {/* Left Side: Mobile Menu Button & Search */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Mobile hamburger button */}
+          <button
+            onClick={onOpenMobileMenu}
+            className="lg:hidden w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white shrink-0"
+            title="Open navigation menu"
+          >
+            <Menu size={18} />
+          </button>
 
-        {/* ── LEFT ───────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-6 min-w-0 flex-1">
-          <div className="w-72 shrink-0">
+          {/* Search Box */}
+          <div className="w-full max-w-xs md:max-w-sm">
             <StockSearch />
           </div>
 
-          <div className="hidden xl:flex items-center gap-5 min-w-0">
-            {marketData.map((market, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span className="text-[11px] text-gray-500 uppercase tracking-wide">
-                  {market.symbol === "^NSEI" ? "NIFTY 50" : "SENSEX"}
+          {/* Live Market Indices Ticker (Desktop) */}
+          <div className="hidden xl:flex items-center gap-4 pl-3 border-l border-white/[0.08] min-w-0">
+            {marketData.map((market) => (
+              <div key={market.symbol} className="flex items-center gap-2">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                  {market.name || (market.symbol === "^NSEI" ? "NIFTY 50" : "SENSEX")}
                 </span>
-                <span className="text-[13px] font-semibold text-white">
-                  {market.price?.toLocaleString()}
+                <span className="text-[13px] font-extrabold text-white">
+                  {market.price ? market.price.toLocaleString("en-IN") : "—"}
                 </span>
-                <span className={`text-[12px] font-medium
-                  ${market.positive ? "text-green-400" : "text-red-400"}`}>
-                  {market.change?.toFixed(2)}%
+                <span
+                  className={`text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                    market.positive
+                      ? "text-emerald-400 bg-emerald-500/10"
+                      : "text-rose-400 bg-rose-500/10"
+                  }`}
+                >
+                  {market.positive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                  {market.change >= 0 ? "+" : ""}
+                  {market.change ? market.change.toFixed(2) : "0.00"}%
                 </span>
-                {index !== marketData.length - 1 && (
-                  <div className="w-px h-4 bg-white/10 ml-2" />
-                )}
               </div>
             ))}
 
-            <div className="flex items-center gap-3 ml-1">
-              <div className="flex items-center gap-1.5">
-                <div className={`w-2 h-2 rounded-full animate-pulse
-                  ${marketOpen ? "bg-green-400" : "bg-red-400"}`} />
-                <span className={`text-[14px] font-medium
-                  ${marketOpen ? "text-green-400" : "text-red-400"}`}>
-                  {marketOpen ? "Market Open" : "Market Closed"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[15px] text-gray-500
-                              border-l border-white/10 pl-3">
-                <Clock size={13} className="shrink-0" />
-                <span className="font-mono">{formattedTime}</span>
-              </div>
+            {/* Market Open Status Pill */}
+            <div className="flex items-center gap-1.5 pl-2 border-l border-white/[0.08]">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  marketOpen ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
+                }`}
+              />
+              <span
+                className={`text-[11px] font-bold ${
+                  marketOpen ? "text-emerald-400" : "text-gray-400"
+                }`}
+              >
+                {marketOpen ? "NSE Live" : "NSE Closed"}
+              </span>
+            </div>
+
+            {/* Live Clock IST */}
+            <div className="flex items-center gap-1 text-[11px] text-gray-400 font-mono pl-2">
+              <Clock size={12} className="text-gray-500" />
+              <span>{formattedTime} IST</span>
             </div>
           </div>
         </div>
 
-        {/* ── RIGHT ──────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3 shrink-0">
-
-          {/* Bell */}
-          <div className="relative">
+        {/* Right Side: Alerts/Notification Bell & Profile */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Notifications Dropdown */}
+          <div className="relative" ref={notifRef}>
             <button
-              onClick={() => { setShowAlerts(!showAlerts); setShowProfileMenu(false); }}
-              className="relative w-9 h-9 rounded-xl bg-white/5 border border-white/10
-                         flex items-center justify-center text-gray-300
-                         hover:text-white hover:bg-white/10 transition-all"
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                setShowProfileMenu(false);
+              }}
+              className="relative w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 transition-all"
+              title="Notifications"
             >
-              <Bell size={17} />
-              {alerts?.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-4.5 h-4.5 px-1
-                                  rounded-full bg-red-500 flex items-center justify-center
-                                  text-[9px] font-bold text-white border-2 border-[#0d1523]">
-                  {alerts.length > 99 ? "99+" : alerts.length}
+              <Bell size={16} />
+              {unreadNotesCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-emerald-500 text-black text-[10px] font-extrabold flex items-center justify-center border border-[#0b1120]">
+                  {unreadNotesCount > 9 ? "9+" : unreadNotesCount}
                 </span>
               )}
             </button>
 
-            {showAlerts && (
-              <div className="absolute right-0 top-12 w-80 bg-[#111827]
-                              border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50">
-                <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white">Alerts</h3>
-                  <span className="text-xs text-gray-400">{alerts?.length || 0} Active</span>
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {alerts?.length === 0 ? (
-                    <div className="p-5 text-sm text-gray-400">No active alerts</div>
-                  ) : (
-                    alerts.map((alert) => (
-                      <div key={alert._id}
-                        className="px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-all">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-white">{alert.symbol}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">Target ₹{alert.targetPrice}</p>
-                          </div>
-                          <span className={`text-[10px] px-2 py-1 rounded-full
-                            ${alert.triggered
-                              ? "bg-green-500/10 text-green-400"
-                              : "bg-yellow-500/10 text-yellow-400"}`}>
-                            {alert.triggered ? "Triggered" : "Active"}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    setShowAlerts(false);
-                    document.getElementById("alerts")?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  className="w-full py-3 text-sm font-medium text-green-400
-                             hover:bg-green-500/10 transition-all"
-                >
-                  View All Alerts
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* ── Profile ──────────────────────────────────────────────── */}
-          <div className="relative" ref={profileRef}>
-            <button
-              onClick={() => { setShowProfileMenu(!showProfileMenu); setShowAlerts(false); }}
-              className={`w-9 h-9 rounded-full ${gradient} flex items-center justify-center
-                         text-[12px] font-bold text-white shadow-lg transition-all
-                         hover:scale-105 hover:shadow-emerald-500/30
-                         ring-2 ring-transparent hover:ring-white/20
-                         ${showProfileMenu ? "ring-white/20 scale-105" : ""}`}
-            >
-              {initials}
-            </button>
-
-            {/* ── Premium Profile Dropdown ─────────────────────────── */}
             <AnimatePresence>
-              {showProfileMenu && (
+              {showNotifications && (
                 <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-12 w-64
-                             bg-[#0f1923] border border-white/10
-                             rounded-2xl shadow-2xl shadow-black/40 z-50
-                             overflow-hidden"
+                  className="absolute right-0 top-12 w-80 sm:w-96 bg-[#0e1626] border border-white/10 rounded-2xl shadow-2xl shadow-black/80 z-50 overflow-hidden"
                 >
-                  {/* Profile header */}
-                  <div className="px-4 pt-4 pb-3 border-b border-white/6">
-                    <div className="flex items-center gap-3">
-                      {/* Large avatar */}
-                      <div className={`w-11 h-11 rounded-xl ${gradient} flex items-center
-                                       justify-center text-[15px] font-bold text-white
-                                       shadow-lg shrink-0`}>
-                        {initials}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-semibold text-white truncate leading-none mb-1">
-                          {displayName}
-                        </p>
-                        <p className="text-[11px] text-gray-500 truncate leading-none">
-                          {user?.email}
-                        </p>
-                      </div>
+                  <div className="px-4 py-3 border-b border-white/[0.08] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-[13px] font-bold text-white">Notifications</h3>
+                      {unreadNotesCount > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 bg-emerald-500/15 text-emerald-400 rounded-full">
+                          {unreadNotesCount} new
+                        </span>
+                      )}
                     </div>
-
-                    {/* Plan badge */}
-                    <div className="mt-3 flex items-center justify-between
-                                    bg-white/4 rounded-xl px-3 py-2 border border-white/[0.06]">
-                      <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-gray-500" />
-                        <span className="text-[11px] text-gray-400 font-medium">Free Plan</span>
-                      </div>
-                      <button className="text-[10px] font-bold text-emerald-400
-                                         hover:text-emerald-300 transition-colors">
-                        Upgrade →
+                    {unreadNotesCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
+                      >
+                        <CheckCheck size={13} /> Mark all read
                       </button>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Quick stats */}
-                  <div className="grid grid-cols-2 gap-px bg-white/[0.04] border-b border-white/[0.06]">
-                    <div className="bg-[#0f1923] px-4 py-2.5 text-center">
-                      <p className="text-[11px] text-gray-500 mb-0.5">Alerts</p>
-                      <p className="text-[14px] font-bold text-white">{alerts?.length || 0}</p>
-                    </div>
-                    <div className="bg-[#0f1923] px-4 py-2.5 text-center">
-                      <p className="text-[11px] text-gray-500 mb-0.5">Triggered</p>
-                      <p className={`text-[14px] font-bold
-                        ${triggeredCnt > 0 ? "text-green-400" : "text-white"}`}>
-                        {triggeredCnt}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Menu items */}
-                  <div className="p-2">
-                    <button
-                      onClick={() => setShowProfileMenu(false)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-                                 text-[13px] text-gray-400 hover:text-white
-                                 hover:bg-white/[0.05] transition-all group"
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center
-                                       justify-center group-hover:bg-white/10 transition-all">
-                        <User size={13} />
+                  <div className="max-h-80 overflow-y-auto divide-y divide-white/[0.04]">
+                    {!notifications || notifications.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-gray-500">
+                        No notifications yet. Alerts will appear here when triggered.
                       </div>
-                      <span className="flex-1 text-left">Profile</span>
-                      <ChevronRight size={13} className="text-gray-600" />
-                    </button>
-
-                    <button
-                      onClick={() => setShowProfileMenu(false)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-                                 text-[13px] text-gray-400 hover:text-white
-                                 hover:bg-white/[0.05] transition-all group"
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center
-                                       justify-center group-hover:bg-white/10 transition-all">
-                        <Settings size={13} />
-                      </div>
-                      <span className="flex-1 text-left">Settings</span>
-                      <ChevronRight size={13} className="text-gray-600" />
-                    </button>
+                    ) : (
+                      notifications.slice(0, 10).map((note) => (
+                        <div
+                          key={note._id}
+                          className={`p-3.5 transition-colors ${
+                            note.read ? "bg-transparent opacity-75" : "bg-emerald-500/[0.05]"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                              <Bell size={13} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-semibold text-white leading-snug">
+                                {note.message}
+                              </p>
+                              <p className="text-[10px] text-gray-500 mt-1">
+                                {new Date(note.createdAt).toLocaleTimeString("en-IN", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  day: "numeric",
+                                  month: "short",
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
 
-                  {/* Logout */}
-                  <div className="p-2 pt-0 border-t border-white/[0.06]">
-                    <button
-                      onClick={() => { localStorage.clear(); window.location.href = "/"; }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-                                 text-[13px] text-red-400 hover:text-red-300
-                                 hover:bg-red-500/[0.08] transition-all group mt-1"
+                  <div className="p-2 border-t border-white/[0.08] text-center bg-[#070d18]">
+                    <Link
+                      to="/alerts"
+                      onClick={() => setShowNotifications(false)}
+                      className="text-[12px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors block py-1"
                     >
-                      <div className="w-7 h-7 rounded-lg bg-red-500/10 flex items-center
-                                       justify-center group-hover:bg-red-500/20 transition-all">
-                        <LogOut size={13} className="text-red-400" />
-                      </div>
-                      <span>Logout</span>
-                    </button>
+                      Manage All Alerts →
+                    </Link>
                   </div>
-
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
+          {/* User Profile Dropdown */}
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => {
+                setShowProfileMenu(!showProfileMenu);
+                setShowNotifications(false);
+              }}
+              className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black font-extrabold text-[12px] shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all"
+            >
+              {initials}
+            </button>
+
+            <AnimatePresence>
+              {showProfileMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-12 w-64 bg-[#0e1626] border border-white/10 rounded-2xl shadow-2xl shadow-black/80 z-50 overflow-hidden"
+                >
+                  {/* User Profile Header */}
+                  <div className="p-4 border-b border-white/[0.08]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black font-extrabold text-sm shrink-0">
+                        {initials}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-bold text-white truncate leading-tight">
+                          {displayName}
+                        </p>
+                        <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                          {user?.email}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Menu Links */}
+                  <div className="p-2 space-y-1">
+                    <button
+                      onClick={() => {
+                        navigate("/alerts");
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[13px] text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Bell size={15} className="text-amber-400" />
+                        <span>Price Alerts</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                        {alerts?.length || 0}
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        navigate("/watchlist");
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[13px] text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <TrendingUp size={15} className="text-emerald-400" />
+                        <span>My Watchlist</span>
+                      </div>
+                      <ChevronRight size={14} className="text-gray-500" />
+                    </button>
+                  </div>
+
+                  {/* Logout Action */}
+                  <div className="p-2 border-t border-white/[0.08]">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium text-rose-400 hover:bg-rose-500/10 transition-all"
+                    >
+                      <LogOut size={15} />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
-    </motion.div>
+    </header>
   );
 }
 

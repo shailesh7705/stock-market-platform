@@ -1,142 +1,196 @@
+// client/src/components/layout/Sidebar.jsx
 import {
-  LayoutDashboard, Bell, TrendingUp, Bookmark,
-  Newspaper, BriefcaseBusiness, Search,
-  LogOut, Zap, Crown, Moon, Sun,
+  LayoutDashboard,
+  Bell,
+  TrendingUp,
+  Bookmark,
+  Newspaper,
+  Search,
+  LogOut,
+  Zap,
+  ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import useAlertStore from "../../store/alertStore";
+import useWatchlistStore from "../../store/watchlistStore";
 
-const menuItems = [
-  { title: "Dashboard",     id: "top",           icon: <LayoutDashboard size={18} /> },
-  { title: "Watchlist",     id: "watchlist",     icon: <Bookmark size={18} /> },
-  { title: "Alerts",        id: "alerts",        icon: <Bell size={18} /> },
-  { title: "Portfolio",     id: "analytics",     icon: <BriefcaseBusiness size={18} />, soon: true },
-  { title: "Search",        id: "top",           icon: <Search size={18} /> },
-  { title: "Market Movers", id: "market-movers", icon: <TrendingUp size={18} /> },
-  { title: "News",          id: "news",          icon: <Newspaper size={18} />, soon: true },
-];
-
-function Sidebar() {
-  const [active, setActive] = useState("Dashboard");
-  const [isDark, setIsDark] = useState(true);
+function Sidebar({ onCloseMobile }) {
+  const location = useLocation();
   const navigate = useNavigate();
+  const { alerts } = useAlertStore();
+  const { watchlist } = useWatchlistStore();
 
-  useEffect(() => {
-    if (isDark) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-  }, [isDark]);
+  const activeAlertsCount = alerts?.filter((a) => !a.triggered).length || 0;
+  const watchlistCount = watchlist?.length || 0;
 
-  const scrollToSection = (id) => {
-    const container = document.getElementById("dashboard-container");
-    const element = document.getElementById(id);
-    if (!container || !element) return;
-    container.scrollTo({ top: element.offsetTop - 20, behavior: "smooth" });
-  };
+  const navItems = [
+    {
+      title: "Dashboard",
+      path: "/dashboard",
+      icon: LayoutDashboard,
+      badge: null,
+    },
+    {
+      title: "Watchlist",
+      path: "/watchlist",
+      icon: Bookmark,
+      badge: watchlistCount > 0 ? watchlistCount : null,
+      badgeColor: "bg-blue-500/15 text-blue-400 border-blue-500/20",
+    },
+    {
+      title: "Price Alerts",
+      path: "/alerts",
+      icon: Bell,
+      badge: activeAlertsCount > 0 ? activeAlertsCount : null,
+      badgeColor: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+    },
+    {
+      title: "Market Movers",
+      path: "/dashboard#market-movers",
+      icon: TrendingUp,
+      action: () => {
+        if (location.pathname === "/dashboard") {
+          document.getElementById("market-movers")?.scrollIntoView({ behavior: "smooth" });
+        } else {
+          navigate("/dashboard");
+          setTimeout(() => {
+            document.getElementById("market-movers")?.scrollIntoView({ behavior: "smooth" });
+          }, 200);
+        }
+      },
+    },
+    {
+      title: "Market News",
+      path: "/dashboard#news",
+      icon: Newspaper,
+      action: () => {
+        if (location.pathname === "/dashboard") {
+          document.getElementById("news")?.scrollIntoView({ behavior: "smooth" });
+        } else {
+          navigate("/dashboard");
+          setTimeout(() => {
+            document.getElementById("news")?.scrollIntoView({ behavior: "smooth" });
+          }, 200);
+        }
+      },
+    },
+  ];
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     window.location.href = "/";
-    
+  };
+
+  const handleItemClick = (item) => {
+    if (onCloseMobile) onCloseMobile();
+    if (item.action) {
+      item.action();
+    } else {
+      navigate(item.path);
+    }
   };
 
   return (
-    <motion.div
-      initial={{ x: -40, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="hidden lg:flex w-64 shrink-0 h-screen sticky top-0
-                 bg-[#0d1523] border-r border-white/5 flex-col px-3 py-5 overflow-y-auto"
-    >
-      {/* Logo */}
-      <div className="flex items-center gap-2 mb-8 pl-1">
-        <div className="bg-green-500 rounded-lg p-1.5 shrink-0">
-          <Zap size={15} className="text-black" />
-        </div>
-        <h1 className="text-[17px] font-bold tracking-tight text-white whitespace-nowrap">
-          StockPulse
-        </h1>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex-1 space-y-0.5">
-        {menuItems.map((item) => {
-          const isActive = active === item.title;
-          return (
-            <motion.div
-              key={item.title}
-              onClick={() => { setActive(item.title); scrollToSection(item.id); }}
-              whileHover={{ x: isActive ? 0 : 3 }}
-              transition={{ duration: 0.15 }}
-              className={`flex items-center gap-3 px-3 py-3 rounded-xl text-[14px]
-                          cursor-pointer transition-all relative
-                          ${isActive
-                            ? "bg-green-500/10 text-green-400 font-medium"
-                            : "text-gray-400 hover:bg-white/5 hover:text-gray-200"}`}
-            >
-              {/* FIX #9 — left border bar as active indicator (more visible than dot) */}
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2
-                                w-1 h-6 rounded-r-full bg-green-400" />
-              )}
-
-              <span className={`shrink-0 ${isActive ? "text-green-400" : "text-gray-500"}`}>
-                {item.icon}
-              </span>
-
-              <span className="whitespace-nowrap flex-1">{item.title}</span>
-
-              {/* Soon badge */}
-              {item.soon && !isActive && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md
-                                 bg-white/5 text-zinc-500 border border-white/[0.07]">
-                  SOON
-                </span>
-              )}
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* FIX #6 — Green premium banner */}
-      <div className="mx-1 mb-4 mt-4 p-4 rounded-2xl
-                      bg-linear-to-b from-emerald-900/40 to-emerald-800/20
-                      border border-emerald-500/20 text-center">
-        <div className="flex justify-center mb-2">
-          <Crown size={22} className="text-emerald-400" />
-        </div>
-        <p className="text-[13px] font-semibold text-white mb-1">Go Premium</p>
-        <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
-          Unlock advanced charts and premium insights.
-        </p>
-        <button className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500
-                           text-white text-[12px] font-medium transition-all">
-          Upgrade Now
-        </button>
-      </div>
-
-      {/* FIX #7 — Divider before bottom actions */}
-      <div className="border-t border-white/[0.07] pt-3 space-y-1">
-        <button
-          onClick={() => setIsDark(!isDark)}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px]
-                     text-gray-400 hover:bg-white/5 hover:text-white w-full transition-all"
+    <div className="w-64 shrink-0 h-full bg-[#0b1120] border-r border-white/[0.07] flex flex-col justify-between p-4 overflow-y-auto">
+      <div>
+        {/* Brand Logo */}
+        <div
+          onClick={() => {
+            navigate("/dashboard");
+            if (onCloseMobile) onCloseMobile();
+          }}
+          className="flex items-center gap-3 px-3 py-3 mb-6 cursor-pointer group"
         >
-          {isDark ? <Sun size={18} className="shrink-0" /> : <Moon size={18} className="shrink-0" />}
-          <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
-        </button>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+            <Zap size={18} className="fill-current" />
+          </div>
+          <div>
+            <span className="text-[17px] font-extrabold text-white tracking-tight leading-none block">
+              StockPulse
+            </span>
+            <span className="text-[10px] font-semibold text-emerald-400 tracking-wider uppercase mt-0.5 block">
+              NSE Alerts Engine
+            </span>
+          </div>
+        </div>
 
+        {/* Navigation Items */}
+        <div className="space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isCurrent =
+              item.path === location.pathname ||
+              (item.path.startsWith("/dashboard#") && location.pathname === "/dashboard");
+
+            return (
+              <button
+                key={item.title}
+                onClick={() => handleItemClick(item)}
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-[13px] font-semibold transition-all relative group ${
+                  isCurrent
+                    ? "bg-emerald-500/10 text-emerald-400 font-bold"
+                    : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]"
+                }`}
+              >
+                {/* Active bar indicator */}
+                {isCurrent && (
+                  <motion.div
+                    layoutId="activeBar"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-emerald-400"
+                  />
+                )}
+
+                <div className="flex items-center gap-3">
+                  <Icon
+                    size={18}
+                    className={isCurrent ? "text-emerald-400" : "text-gray-500 group-hover:text-gray-300"}
+                  />
+                  <span>{item.title}</span>
+                </div>
+
+                {item.badge !== null && item.badge !== undefined && (
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      item.badgeColor || "bg-white/10 text-gray-300 border-white/10"
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom User / Info Box */}
+      <div className="pt-4 border-t border-white/[0.07] space-y-3">
+        {/* Email Alert Status Pill */}
+        <div className="p-3 bg-[#070d18] border border-white/[0.06] rounded-2xl">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <p className="text-[11px] font-bold text-white">Email Engine Live</p>
+          </div>
+          <p className="text-[10px] text-gray-500 leading-relaxed">
+            Target hits automatically dispatch HTML alerts to your inbox.
+          </p>
+        </div>
+
+        {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px]
-                     text-red-400 hover:bg-red-500/10 w-full transition-all"
+          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-rose-400 hover:bg-rose-500/10 transition-all group"
         >
-          <LogOut size={18} className="shrink-0" />
-          <span>Logout</span>
+          <div className="flex items-center gap-3">
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </div>
+          <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

@@ -1,13 +1,13 @@
-
+// client/src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
-import Home               from "./pages/Home";
-import Login              from "./pages/Login";
-import Signup             from "./pages/Signup";
-import DashboardPage      from "./pages/DashboardPage";
-import StockDetailsPage   from "./pages/StockDetailsPage";
-import WatchlistPage      from "./pages/WatchlistPage";
-import ProtectedRoute     from "./components/ProtectedRoute";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import DashboardPage from "./pages/DashboardPage";
+import StockDetailsPage from "./pages/StockDetailsPage";
+import WatchlistPage from "./pages/WatchlistPage";
+import AlertsPage from "./pages/AlertsPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 import NotificationListener from "./components/notifications/NotificationListener";
 
 function App() {
@@ -15,28 +15,50 @@ function App() {
     <BrowserRouter>
       <NotificationListener />
       <Routes>
-
-        {/* Public */}
-        <Route path="/"       element={<Home />}   />
-        <Route path="/login"  element={<Login />}  />
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
-        {/* Protected */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute><DashboardPage /></ProtectedRoute>
-        } />
+        {/* Protected Dashboard & Trading Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/stock/:symbol" element={
-          <ProtectedRoute><StockDetailsPage /></ProtectedRoute>
-        } />
+        <Route
+          path="/alerts"
+          element={
+            <ProtectedRoute>
+              <AlertsPage />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/watchlist" element={
-          <ProtectedRoute><WatchlistPage /></ProtectedRoute>
-        } />
+        <Route
+          path="/watchlist"
+          element={
+            <ProtectedRoute>
+              <WatchlistPage />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Fallback — redirect unknown routes to dashboard */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/stock/:symbol"
+          element={
+            <ProtectedRoute>
+              <StockDetailsPage />
+            </ProtectedRoute>
+          }
+        />
 
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

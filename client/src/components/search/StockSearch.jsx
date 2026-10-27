@@ -1,943 +1,255 @@
-import { Search, Plus, Check, Bell, ExternalLink } from "lucide-react";
+// client/src/components/search/StockSearch.jsx
+import { Search, Plus, Check, Bell, ExternalLink, X, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-
 import { searchStocks } from "../../services/stockService";
 import { addToWatchlist } from "../../services/watchlistService";
-
 import useWatchlistStore from "../../store/watchlistStore";
-
 import CreateAlertModal from "../alerts/CreateAlertModal";
+import toast from "react-hot-toast";
 
-import { useToast, ToastContainer } from "../ui/Toast";
+function cleanSymbol(sym = "") {
+  return sym.replace(".NS", "").replace(".BO", "").toUpperCase();
+}
 
 function StockSearch() {
-
   const [query, setQuery] = useState("");
-
   const [results, setResults] = useState([]);
-
   const [loading, setLoading] = useState(false);
-
   const [showDropdown, setShowDropdown] = useState(false);
-
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const [addingSymbol, setAddingSymbol] = useState("");
-
   const [alertStock, setAlertStock] = useState(null);
 
-  const { watchlist, addStock } =
-    useWatchlistStore();
-
+  const { watchlist, addStock } = useWatchlistStore();
   const navigate = useNavigate();
-
-  const toast = useToast();
-
   const wrapperRef = useRef(null);
 
-  // Close dropdown outside click
+  // Close dropdown on outside click
   useEffect(() => {
-
     const handler = (e) => {
-
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(e.target)
-      ) {
-
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
         setShowDropdown(false);
-
       }
-
     };
-
-    document.addEventListener(
-      "mousedown",
-      handler
-    );
-
-    return () =>
-      document.removeEventListener(
-        "mousedown",
-        handler
-      );
-
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   // Debounced search
   useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < 1) {
+      setResults([]);
+      setShowDropdown(false);
+      setSelectedIndex(-1);
+      return;
+    }
 
-    const timeout = setTimeout(() => {
-
-      if (query.trim().length >= 2) {
-
-        fetchStocks();
-
-      } else {
-
-        setResults([]);
-
+    const timer = setTimeout(async () => {
+      try {
+        setLoading(true);
+        const data = await searchStocks(trimmed);
+        setResults(Array.isArray(data) ? data : []);
+        setShowDropdown(true);
+        setSelectedIndex(-1);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
+    }, 180);
 
-    }, 220);
-
-    return () => clearTimeout(timeout);
-
+    return () => clearTimeout(timer);
   }, [query]);
 
-  const fetchStocks = async () => {
+  // Keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!showDropdown || results.length === 0) return;
 
-    try {
-
-      setLoading(true);
-
-      const data =
-        await searchStocks(query);
-
-      setResults(data);
-
-      setShowDropdown(true);
-
-    } catch (error) {
-
-      console.log(error);
-
-    } finally {
-
-      setLoading(false);
-
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
+    } else if (e.key === "Enter" && selectedIndex >= 0) {
+      e.preventDefault();
+      handleSelectStock(results[selectedIndex]);
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
     }
-
   };
 
-  // Add to watchlist
-  const handleAddWatchlist = async (stock) => {
+  const handleSelectStock = (stock) => {
+    setShowDropdown(false);
+    setQuery("");
+    const sym = cleanSymbol(stock.symbol);
+    navigate(`/stock/${sym}`);
+  };
 
-    const exists = watchlist.find(
-      (i) => i.symbol === stock.symbol
-    );
-
-    if (exists) {
-
-      toast.info(
-        "Already in watchlist",
-        `${stock.symbol} is already tracked`
-      );
-
+  const handleAddWatchlist = async (e, stock) => {
+    e.stopPropagation();
+    const isAlready = watchlist.some((w) => w.symbol === stock.symbol);
+    if (isAlready) {
+      toast.error(`${cleanSymbol(stock.symbol)} is already in your watchlist`);
       return;
-
     }
 
     try {
-
       setAddingSymbol(stock.symbol);
-
-      const saved =
-        await addToWatchlist(stock);
-
-      addStock({
-
-        _id: saved._id,
-
-        name: stock.name,
-
+      const res = await addToWatchlist({
         symbol: stock.symbol,
-
-        exchange: "NSE",
-
-        price: "₹0.00",
-
-        change: "+0.00%",
-
-        positive: true,
-
-        data: [20, 25, 23, 30, 28, 35],
-
+        name: stock.name,
       });
-
-      toast.success(
-        "Added to watchlist",
-        `${stock.name} is now being tracked`
-      );
-
-    } catch (error) {
-
-      console.log(
-        error.response?.data || error
-      );
-
-      toast.error(
-        "Failed to add",
-        "Could not add to watchlist"
-      );
-
+      addStock(res);
+      toast.success(`${cleanSymbol(stock.symbol)} added to watchlist!`, { icon: "⭐" });
+    } catch (err) {
+      toast.error("Could not add to watchlist");
     } finally {
-
       setAddingSymbol("");
-
     }
-
   };
 
-  // View stock details
-  const handleViewStock = (stock) => {
-
+  const handleOpenAlert = (e, stock) => {
+    e.stopPropagation();
     setShowDropdown(false);
-
-    setQuery("");
-
-    setResults([]);
-
-    const clean = stock.symbol
-
-      .replace(".NS", "")
-
-      .replace(".BO", "");
-
-    navigate(`/stock/${clean}`);
-
-  };
-
-  // Open alert modal
-  const handleCreateAlert = (stock) => {
-
     setAlertStock(stock);
-
-  };
-
-  // Close dropdown helper
-  const closeDropdown = () => {
-
-    setShowDropdown(false);
-
-    setQuery("");
-
-    setResults([]);
-
   };
 
   return (
-
     <>
-
-      <ToastContainer
-
-        toasts={toast.toasts}
-
-        onRemove={toast.remove}
-
-      />
-
-      <div
-
-        className="relative w-full max-w-72"
-
-        ref={wrapperRef}
-
-      >
-
-        {/* Search Input */}
-        <div
-          className="
-
-            flex items-center
-
-            bg-white/4
-
-            border border-white/7
-
-            rounded-xl
-
-            px-3.5
-
-            h-10
-
-            transition-all
-
-            focus-within:border-green-500/30
-
-            focus-within:bg-white/6
-
-          "
-        >
-
-          <Search
-            size={14}
-            className="text-gray-500 shrink-0"
-          />
-
+      <div className="relative w-full" ref={wrapperRef}>
+        {/* Search Input Box */}
+        <div className="relative flex items-center">
+          <Search size={15} className="absolute left-3.5 text-gray-500 pointer-events-none" />
           <input
-
             type="text"
-
-            placeholder="Search stocks..."
-
+            placeholder="Search NSE stocks (e.g. Reliance, TCS, HDFC)..."
             value={query}
-
-            onChange={(e) => {
-
-              setQuery(e.target.value);
-
-              if (!e.target.value) {
-
-                setShowDropdown(false);
-
-              }
-
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => {
+              if (results.length > 0) setShowDropdown(true);
             }}
-
-            onFocus={() =>
-
-              results.length > 0 &&
-              setShowDropdown(true)
-
-            }
-
-            className="
-
-              bg-transparent
-
-              flex-1
-
-              outline-none
-
-              px-2.5
-
-              text-[13px]
-
-              placeholder:text-gray-600
-
-              text-white
-
-            "
-
+            onKeyDown={handleKeyDown}
+            className="w-full h-10 rounded-xl bg-[#080d1a] border border-white/10 pl-9 pr-8 text-xs text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder:text-gray-500 font-medium"
           />
-
           {query && (
-
             <button
-
               onClick={() => {
-
                 setQuery("");
-
                 setResults([]);
-
                 setShowDropdown(false);
-
               }}
-
-              className="
-
-                text-gray-600
-
-                hover:text-gray-300
-
-                transition-colors
-
-                text-lg
-
-                leading-none
-
-              "
-
+              className="absolute right-2.5 text-gray-500 hover:text-white transition-colors"
             >
-
-              ×
-
+              <X size={14} />
             </button>
-
           )}
-
         </div>
 
-        {/* Dropdown */}
+        {/* Results Dropdown */}
         <AnimatePresence>
-
-          {showDropdown && query && (
-
+          {showDropdown && (
             <motion.div
-
-              initial={{
-                opacity: 0,
-                y: 8,
-                scale: 0.98
-              }}
-
-              animate={{
-                opacity: 1,
-                y: 0,
-                scale: 1
-              }}
-
-              exit={{
-                opacity: 0,
-                y: 8,
-                scale: 0.98
-              }}
-
-              transition={{
-                duration: 0.15
-              }}
-
-              className="
-
-                absolute
-
-                top-12
-
-                left-0
-
-                w-[340px]
-
-                rounded-2xl
-
-                border border-white/[0.08]
-
-                bg-[#0f1923]/98
-
-                backdrop-blur-xl
-
-                shadow-2xl
-
-                shadow-black/50
-
-                overflow-hidden
-
-                z-[999]
-
-              "
-
+              initial={{ opacity: 0, y: 6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.98 }}
+              transition={{ duration: 0.15 }}
+              className="absolute left-0 right-0 top-12 max-h-96 bg-[#0e1626] border border-white/10 rounded-2xl shadow-2xl shadow-black/80 z-50 overflow-hidden divide-y divide-white/[0.04]"
             >
-
-              {/* Header */}
-              <div
-                className="
-
-                  px-4 py-2.5
-
-                  border-b border-white/[0.06]
-
-                  flex items-center
-
-                  justify-between
-
-                "
-              >
-
-                <span
-                  className="
-
-                    text-[11px]
-
-                    text-gray-500
-
-                    font-medium
-
-                    uppercase
-
-                    tracking-wider
-
-                  "
-                >
-
-                  {loading
-
-                    ? "Searching..."
-
-                    : `${results.length} result${results.length !== 1 ? "s" : ""}`}
-
-                </span>
-
-                {query && (
-
-                  <span
-                    className="
-
-                      text-[11px]
-
-                      text-gray-600
-
-                    "
-                  >
-
-                    "{query}"
-
-                  </span>
-
-                )}
-
-              </div>
-
-              {/* Loading */}
-              {loading && (
-
-                <div className="p-3 space-y-2">
-
-                  {[0, 1, 2].map((i) => (
-
-                    <div
-
-                      key={i}
-
-                      className="
-
-                        flex items-center gap-3
-
-                        px-1 py-1
-
-                        animate-pulse
-
-                      "
-
-                    >
-
-                      <div
-                        className="
-
-                          w-8 h-8
-
-                          rounded-lg
-
-                          bg-white/5
-
-                          shrink-0
-
-                        "
-                      />
-
-                      <div className="flex-1">
-
-                        <div
-                          className="
-
-                            h-3 w-32
-
-                            bg-white/5
-
-                            rounded
-
-                            mb-1.5
-
-                          "
-                        />
-
-                        <div
-                          className="
-
-                            h-2 w-20
-
-                            bg-white/5
-
-                            rounded
-
-                          "
-                        />
-
-                      </div>
-
-                    </div>
-
-                  ))}
-
+              {loading ? (
+                <div className="p-4 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                  <svg className="animate-spin w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.2" />
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                  Searching NSE stocks...
                 </div>
-
-              )}
-
-              {/* Results */}
-              {!loading && results.length > 0 && (
-
-                <div
-                  className="
-
-                    max-h-[360px]
-
-                    overflow-y-auto
-
-                  "
-                >
-
-                  {results.map((stock) => {
-
-                    const exists =
-                      watchlist.find(
-                        (i) =>
-                          i.symbol === stock.symbol
-                      );
-
-                    const isAdding =
-                      addingSymbol === stock.symbol;
-
-                    const clean = stock.symbol
-
-                      .replace(".NS", "")
-
-                      .replace(".BO", "");
+              ) : results.length === 0 ? (
+                <div className="p-4 text-center text-xs text-gray-500">
+                  No matching stocks found for "{query}"
+                </div>
+              ) : (
+                <div className="overflow-y-auto max-h-80 divide-y divide-white/[0.04]">
+                  {results.map((stock, idx) => {
+                    const sym = cleanSymbol(stock.symbol);
+                    const isInWl = watchlist.some((w) => w.symbol === stock.symbol);
+                    const isSelected = selectedIndex === idx;
 
                     return (
-
                       <div
-
                         key={stock.symbol}
-
-                        className="
-
-                          flex items-center gap-3
-
-                          px-4 py-3
-
-                          border-b border-white/[0.04]
-
-                          last:border-0
-
-                          hover:bg-white/[0.03]
-
-                          transition-all
-
-                          group
-
-                        "
-
+                        onClick={() => handleSelectStock(stock)}
+                        className={`flex items-center justify-between px-3.5 py-2.5 cursor-pointer transition-colors ${
+                          isSelected ? "bg-white/10" : "hover:bg-white/[0.04]"
+                        }`}
                       >
-
-                        {/* Avatar */}
-                        <div
-                          className="
-
-                            w-8 h-8
-
-                            rounded-lg
-
-                            bg-white/5
-
-                            border border-white/[0.07]
-
-                            flex items-center
-
-                            justify-center
-
-                            text-[10px]
-
-                            font-bold
-
-                            text-gray-400
-
-                            shrink-0
-
-                          "
-                        >
-
-                          {clean.slice(0, 2)}
-
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold text-[11px] flex items-center justify-center shrink-0 border border-emerald-500/20">
+                            {sym.slice(0, 2)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-white group-hover:text-emerald-400">
+                                {sym}
+                              </span>
+                              <span className="text-[9px] font-semibold text-gray-500 bg-white/5 px-1 py-0.2 rounded">
+                                NSE
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                              {stock.name}
+                            </p>
+                          </div>
                         </div>
 
-                        {/* Info */}
-                        <div
-
-                          className="
-
-                            flex-1
-
-                            min-w-0
-
-                            cursor-pointer
-
-                          "
-
-                          onClick={() =>
-                            handleViewStock(stock)
-                          }
-
-                        >
-
-                          <p
-                            className="
-
-                              text-[13px]
-
-                              font-semibold
-
-                              text-white
-
-                              truncate
-
-                              leading-none
-
-                              mb-0.5
-
-                              group-hover:text-green-400
-
-                              transition-colors
-
-                            "
+                        {/* Quick Action Buttons */}
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          {/* Alert Trigger button */}
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenAlert(e, stock)}
+                            className="w-7 h-7 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 flex items-center justify-center transition-all"
+                            title="Set Price Alert"
                           >
+                            <Bell size={13} />
+                          </button>
 
-                            {stock.name}
-
-                          </p>
-
-                          <p
-                            className="
-
-                              text-[11px]
-
-                              text-gray-500
-
-                              leading-none
-
-                            "
+                          {/* Watchlist toggle button */}
+                          <button
+                            type="button"
+                            onClick={(e) => handleAddWatchlist(e, stock)}
+                            disabled={isInWl || addingSymbol === stock.symbol}
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                              isInWl
+                                ? "bg-emerald-500/15 text-emerald-400 opacity-60"
+                                : "bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white"
+                            }`}
+                            title={isInWl ? "Already in Watchlist" : "Add to Watchlist"}
                           >
-
-                            {clean} · NSE
-
-                          </p>
-
+                            {isInWl ? <Check size={13} /> : <Plus size={13} />}
+                          </button>
                         </div>
-
-                        {/* Actions */}
-                        <div
-                          className="
-
-                            flex items-center
-
-                            gap-1.5
-
-                            shrink-0
-
-                          "
-                        >
-
-                          {/* View */}
-                          <button
-
-                            onClick={() =>
-                              handleViewStock(stock)
-                            }
-
-                            className="
-
-                              w-7 h-7
-
-                              rounded-lg
-
-                              flex items-center
-
-                              justify-center
-
-                              bg-white/[0.04]
-
-                              border border-white/[0.07]
-
-                              text-gray-500
-
-                              hover:text-white
-
-                              hover:bg-white/10
-
-                              transition-all
-
-                            "
-
-                          >
-
-                            <ExternalLink size={12} />
-
-                          </button>
-
-                          {/* Alert */}
-                          <button
-
-                            onClick={(e) => {
-
-                              e.preventDefault();
-
-                              e.stopPropagation();
-
-                              handleCreateAlert(stock);
-
-                            }}
-
-                            className="
-
-                              w-7 h-7
-
-                              rounded-lg
-
-                              flex items-center
-
-                              justify-center
-
-                              bg-yellow-500/[0.08]
-
-                              border border-yellow-500/20
-
-                              text-yellow-500
-
-                              hover:bg-yellow-500/20
-
-                              transition-all
-
-                            "
-
-                          >
-
-                            <Bell size={12} />
-
-                          </button>
-
-                          {/* Add */}
-                          <button
-
-                            disabled={
-                              !!exists || isAdding
-                            }
-
-                            onClick={() =>
-                              handleAddWatchlist(stock)
-                            }
-
-                            className={`
-
-                              w-7 h-7
-
-                              rounded-lg
-
-                              flex items-center
-
-                              justify-center
-
-                              border
-
-                              transition-all
-
-                              ${exists
-
-                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 cursor-default"
-
-                                : "bg-emerald-500/[0.08] border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20"}
-
-                            `}
-
-                          >
-
-                            {isAdding ? (
-
-                              <div
-                                className="
-
-                                  w-3 h-3
-
-                                  border-2
-
-                                  border-emerald-400
-
-                                  border-t-transparent
-
-                                  rounded-full
-
-                                  animate-spin
-
-                                "
-                              />
-
-                            ) : exists ? (
-
-                              <Check size={12} />
-
-                            ) : (
-
-                              <Plus size={12} />
-
-                            )}
-
-                          </button>
-
-                        </div>
-
                       </div>
-
                     );
-
                   })}
-
                 </div>
-
               )}
-
-              {/* Empty */}
-              {!loading &&
-                results.length === 0 && (
-
-                <div className="py-10 text-center">
-
-                  <Search
-                    size={24}
-                    className="
-
-                      text-gray-700
-
-                      mx-auto
-
-                      mb-2
-
-                    "
-                  />
-
-                  <p
-                    className="
-
-                      text-[13px]
-
-                      text-gray-500
-
-                    "
-                  >
-
-                    No stocks found for "{query}"
-
-                  </p>
-
-                </div>
-
-              )}
-
             </motion.div>
-
           )}
-
         </AnimatePresence>
-
       </div>
 
-      {/* Alert Modal */}
+      {/* Alert modal when triggered from search */}
       <CreateAlertModal
-
-        open={!!alertStock}
-
-        onClose={() => {
-
-          setAlertStock(null);
-
-          closeDropdown();
-
-        }}
-
-        stock={alertStock ? {
-
-          symbol: alertStock.symbol,
-
-          name: alertStock.name,
-
-          price: null,
-
-        } : null}
-
+        open={Boolean(alertStock)}
+        onClose={() => setAlertStock(null)}
+        stock={alertStock}
       />
-
     </>
-
   );
-
 }
 
 export default StockSearch;

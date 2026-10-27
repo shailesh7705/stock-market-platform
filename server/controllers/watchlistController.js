@@ -1,20 +1,22 @@
 // server/controllers/watchlistController.js
-const Watchlist    = require("../models/Watchlist");
-const yahooFinance = require("yahoo-finance2").default;
+const Watchlist = require("../models/Watchlist");
+const YahooFinance = require("yahoo-finance2").default;
+const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
 const YF_OPTS = { validateResult: false };
 
-// Safe quote fetch — never throws, always returns null on failure
-const safeQuote = async (symbol) => {
+// Safe quote fetch helper
+const safeQuote = async (symbols) => {
   try {
     const result = await Promise.race([
-      yahooFinance.quote(symbol, {}, YF_OPTS),
+      yahooFinance.quote(symbols, {}, YF_OPTS),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 6000)
+        setTimeout(() => reject(new Error("Timeout")), 8000)
       ),
     ]);
     return result;
-  } catch {
+  } catch (err) {
+    console.warn("[Watchlist] Quote error:", err.message);
     return null;
   }
 };
@@ -22,41 +24,56 @@ const safeQuote = async (symbol) => {
 /* ── Add To Watchlist ──────────────────────────────────────────────────────── */
 const addToWatchlist = async (req, res) => {
   try {
-    const { symbol, companyName, name } = req.body;
-    const finalName = companyName || name || symbol;
+    let { symbol, companyName, name } = req.body;
 
     if (!symbol) {
       return res.status(400).json({ message: "Symbol is required" });
     }
 
-    // Prevent duplicates
+    symbol = symbol.trim().toUpperCase();
+    if (!symbol.includes(".")) symbol = `${symbol}.NS`;
+
+    const finalName = companyName || name || symbol.replace(".NS", "");
+
+    // Prevent duplicates for this user
     const existing = await Watchlist.findOne({
       user: req.user._id,
       symbol,
     });
+
     if (existing) {
-      return res.status(400).json({ message: "Already in watchlist" });
+      return res.status(400).json({ message: "Stock is already in your watchlist" });
     }
 
     const item = await Watchlist.create({
-      user:        req.user._id,
+      user: req.user._id,
       symbol,
       companyName: finalName,
     });
 
+    // Try to get live price immediately
+    const quote = await safeQuote(symbol);
+    const price = quote?.regularMarketPrice || 0;
+    const changePercent = quote?.regularMarketChangePercent || 0;
+    const positive = changePercent >= 0;
+
     res.status(201).json({
-      _id:      item._id,
-      symbol:   item.symbol,
-      name:     item.companyName,
+      _id: item._id,
+      symbol: item.symbol,
+      name: item.companyName,
       exchange: "NSE",
-      price:    "₹0.00",
-      change:   "+0.00%",
-      positive: true,
-      data:     [20, 25, 22, 30, 27, 35],
+      price: price > 0 ? `₹${price.toFixed(2)}` : "₹0.00",
+      numericPrice: price,
+      change: `${positive ? "+" : ""}${changePercent.toFixed(2)}%`,
+      changePercent,
+      positive,
+      dayHigh: quote?.regularMarketDayHigh || null,
+      dayLow: quote?.regularMarketDayLow || null,
+      data: [20, 25, 22, 30, 27, 35],
     });
   } catch (error) {
-    console.log("[Watchlist] Add error:", error.message);
-    res.status(500).json({ message: error.message });
+    console.error("[Watchlist] Add error:", error.message);
+    res.status(500).json({ message: error.message || "Failed to add to watchlist" });
   }
 };
 
@@ -64,36 +81,47 @@ const addToWatchlist = async (req, res) => {
 const getWatchlist = async (req, res) => {
   try {
     const watchlist = await Watchlist.find({ user: req.user._id });
-
     if (!watchlist.length) return res.json([]);
 
-    // Fetch all live prices safely — one failure won't crash the rest
-    const quotes = await Promise.all(
-      watchlist.map((item) => safeQuote(item.symbol))
-    );
+    const symbols = watchlist.map((item) => item.symbol);
+    const raw = await safeQuote(symbols);
+    const quotes = Array.isArray(raw) ? raw : raw ? [raw] : [];
 
-    const formatted = watchlist.map((item, i) => {
-      const quote         = quotes[i];
-      const price         = quote?.regularMarketPrice         || 0;
+    // Create symbol map
+    const quoteMap = new Map();
+    for (const q of quotes) {
+      if (q?.symbol) quoteMap.set(q.symbol, q);
+    }
+
+    const formatted = watchlist.map((item) => {
+      const quote = quoteMap.get(item.symbol);
+      const price = quote?.regularMarketPrice || 0;
       const changePercent = quote?.regularMarketChangePercent || 0;
-      const positive      = changePercent >= 0;
+      const positive = changePercent >= 0;
 
       return {
-        _id:      item._id,
-        symbol:   item.symbol,
-        name:     item.companyName,
+        _id: item._id,
+        symbol: item.symbol,
+        name: item.companyName || quote?.shortName || item.symbol.replace(".NS", ""),
         exchange: "NSE",
-        price:    price > 0 ? `₹${price.toFixed(2)}` : "₹0.00",
-        change:   `${positive ? "+" : ""}${changePercent.toFixed(2)}%`,
+        price: price > 0 ? `₹${price.toFixed(2)}` : "₹0.00",
+        numericPrice: price,
+        change: `${positive ? "+" : ""}${changePercent.toFixed(2)}%`,
+        changePercent,
         positive,
-        data:     [20, 25, 22, 30, 27, 35],
+        volume: quote?.regularMarketVolume || 0,
+        dayHigh: quote?.regularMarketDayHigh || null,
+        dayLow: quote?.regularMarketDayLow || null,
+        fiftyTwoWeekHigh: quote?.fiftyTwoWeekHigh || null,
+        fiftyTwoWeekLow: quote?.fiftyTwoWeekLow || null,
+        data: [20, 25, 22, 30, 27, 35],
       };
     });
 
     res.status(200).json(formatted);
   } catch (error) {
-    console.log("[Watchlist] Get error:", error.message);
-    res.status(500).json({ message: error.message });
+    console.error("[Watchlist] Get error:", error.message);
+    res.status(500).json({ message: "Failed to fetch watchlist" });
   }
 };
 
@@ -101,19 +129,19 @@ const getWatchlist = async (req, res) => {
 const removeFromWatchlist = async (req, res) => {
   try {
     const item = await Watchlist.findOne({
-      _id:  req.params.id,
+      _id: req.params.id,
       user: req.user._id,
     });
 
     if (!item) {
-      return res.status(404).json({ message: "Item not found" });
+      return res.status(404).json({ message: "Watchlist item not found" });
     }
 
     await item.deleteOne();
     res.status(200).json({ message: "Removed successfully" });
   } catch (error) {
-    console.log("[Watchlist] Remove error:", error.message);
-    res.status(500).json({ message: error.message });
+    console.error("[Watchlist] Remove error:", error.message);
+    res.status(500).json({ message: "Failed to remove from watchlist" });
   }
 };
 

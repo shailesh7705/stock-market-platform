@@ -1,297 +1,192 @@
+// client/src/components/stocks/StockInsights.jsx
 import Card from "../ui/Card";
-
 import {
-
   TrendingUp,
   TrendingDown,
-  Newspaper,
-  Activity
-
+  Activity,
+  BarChart3,
+  Scale,
+  DollarSign,
+  PieChart,
+  ShieldAlert,
+  Sparkles,
 } from "lucide-react";
 
-import {
+function formatIndianNumber(val) {
+  if (!val || isNaN(val)) return "—";
+  if (val >= 10000000) {
+    const cr = val / 10000000;
+    if (cr >= 100000) {
+      return `₹${(cr / 100000).toFixed(2)} Lakh Cr`;
+    }
+    return `₹${cr.toFixed(2)} Cr`;
+  }
+  if (val >= 100000) {
+    return `₹${(val / 100000).toFixed(2)} L`;
+  }
+  return `₹${val.toLocaleString("en-IN")}`;
+}
 
-  motion
+function StockInsights({ stock }) {
+  const price = stock?.price || 0;
+  const dayLow = stock?.low || price * 0.98;
+  const dayHigh = stock?.high || price * 1.02;
+  const low52 = stock?.fiftyTwoWeekLow || price * 0.75;
+  const high52 = stock?.fiftyTwoWeekHigh || price * 1.25;
 
-} from "framer-motion";
+  // Day Range percentage
+  const dayRangeSpan = dayHigh - dayLow || 1;
+  const dayPct = Math.min(100, Math.max(0, ((price - dayLow) / dayRangeSpan) * 100));
 
-function StockInsights({
+  // 52W Range percentage
+  const span52 = high52 - low52 || 1;
+  const pct52 = Math.min(100, Math.max(0, ((price - low52) / span52) * 100));
 
-  stock
-
-}) {
-
-  const positive = stock?.positive;
-
-  const sentiment = positive
-
-    ? "Bullish"
-
-    : "Bearish";
-
-  const sentimentColor = positive
-
-    ? "text-green-400"
-
-    : "text-red-400";
-
-  const bgColor = positive
-
-    ? "bg-green-500/10"
-
-    : "bg-red-500/10";
+  const isPositive = stock?.positive;
+  const pe = stock?.trailingPE ? stock.trailingPE.toFixed(1) : "—";
+  const divYield = stock?.dividendYield ? `${stock.dividendYield.toFixed(2)}%` : "—";
 
   return (
+    <div className="space-y-4">
+      {/* ── 52-Week & Day Range Gauges (Tickertape Signature) ── */}
+      <Card className="space-y-5">
+        <div>
+          <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-3">
+            <BarChart3 size={16} className="text-emerald-400" />
+            Price Range Analysis
+          </h3>
 
-    <div className="space-y-6">
+          {/* Today's Range */}
+          <div className="space-y-1.5 mb-5">
+            <div className="flex items-center justify-between text-[11px] text-gray-400">
+              <span>Day Low: ₹{dayLow.toLocaleString("en-IN", { maximumFractionDigits: 1 })}</span>
+              <span className="font-bold text-white">Today's Range</span>
+              <span>Day High: ₹{dayHigh.toLocaleString("en-IN", { maximumFractionDigits: 1 })}</span>
+            </div>
+            <div className="relative w-full h-2 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-500 to-emerald-400 rounded-full"
+                style={{ width: `${dayPct}%` }}
+              />
+            </div>
+            <div className="flex justify-end text-[10px] text-emerald-400 font-semibold">
+              Current: ₹{price.toLocaleString("en-IN")}
+            </div>
+          </div>
 
-      {/* Sentiment Card */}
+          {/* 52-Week Range */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] text-gray-400">
+              <span>52W L: ₹{low52.toLocaleString("en-IN", { maximumFractionDigits: 1 })}</span>
+              <span className="font-bold text-white">52-Week Range</span>
+              <span>52W H: ₹{high52.toLocaleString("en-IN", { maximumFractionDigits: 1 })}</span>
+            </div>
+            <div className="relative w-full h-2 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="absolute top-0 bottom-0 bg-gradient-to-r from-amber-500 to-emerald-400 rounded-full"
+                style={{ width: `${pct52}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-gray-400">
+              <span>{pct52.toFixed(0)}% of 52W range</span>
+              <span className="text-emerald-400 font-semibold">
+                {price >= high52 * 0.95 ? "Near 52W High 🚀" : "Trading in Range"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* ── Key Fundamentals Grid ── */}
       <Card>
+        <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
+          <Scale size={16} className="text-blue-400" />
+          Key Fundamentals
+        </h3>
 
-        <div className="flex items-center justify-between mb-6">
-
-          <div>
-
-            <h2 className="text-lg font-bold">
-
-              Market Sentiment
-
-            </h2>
-
-            <p className="text-xs text-gray-500 mt-1">
-
-              AI-powered market signal
-
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 bg-[#080d1a] border border-white/[0.05] rounded-xl">
+            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+              Market Capitalization
             </p>
-
+            <p className="text-[14px] font-extrabold text-white mt-1">
+              {formatIndianNumber(stock?.marketCap)}
+            </p>
           </div>
 
-          <div
-            className={`
+          <div className="p-3 bg-[#080d1a] border border-white/[0.05] rounded-xl">
+            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+              P/E Ratio (TTM)
+            </p>
+            <p className="text-[14px] font-extrabold text-white mt-1">
+              {pe}
+            </p>
+          </div>
 
-              w-12 h-12
+          <div className="p-3 bg-[#080d1a] border border-white/[0.05] rounded-xl">
+            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+              Volume (Today)
+            </p>
+            <p className="text-[14px] font-extrabold text-white mt-1">
+              {stock?.volume ? stock.volume.toLocaleString("en-IN") : "—"}
+            </p>
+          </div>
 
-              rounded-2xl
+          <div className="p-3 bg-[#080d1a] border border-white/[0.05] rounded-xl">
+            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+              Dividend Yield
+            </p>
+            <p className="text-[14px] font-extrabold text-white mt-1">
+              {divYield}
+            </p>
+          </div>
 
-              flex items-center justify-center
+          <div className="p-3 bg-[#080d1a] border border-white/[0.05] rounded-xl">
+            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+              Previous Close
+            </p>
+            <p className="text-[14px] font-extrabold text-white mt-1">
+              ₹{stock?.prevClose ? stock.prevClose.toLocaleString("en-IN") : "—"}
+            </p>
+          </div>
 
-              ${bgColor}
+          <div className="p-3 bg-[#080d1a] border border-white/[0.05] rounded-xl">
+            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+              Open Price
+            </p>
+            <p className="text-[14px] font-extrabold text-white mt-1">
+              ₹{stock?.open ? stock.open.toLocaleString("en-IN") : "—"}
+            </p>
+          </div>
+        </div>
+      </Card>
 
-            `}
+      {/* ── Technical Sentiment Meter ── */}
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <Activity size={16} className="text-purple-400" />
+            Market Sentiment & Signals
+          </h3>
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              isPositive
+                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
+                : "bg-rose-500/15 text-rose-400 border-rose-500/25"
+            }`}
           >
-
-            {positive
-
-              ? <TrendingUp
-                  size={22}
-                  className="text-green-400"
-                />
-
-              : <TrendingDown
-                  size={22}
-                  className="text-red-400"
-                />
-
-            }
-
-          </div>
-
+            {isPositive ? "Bullish Momentum" : "Selling Pressure"}
+          </span>
         </div>
 
-        {/* Signal */}
-        <div
-          className={`
-
-            inline-flex items-center gap-2
-
-            px-3 py-2
-
-            rounded-xl
-
-            text-sm font-medium
-
-            ${bgColor}
-            ${sentimentColor}
-
-          `}
-        >
-
-          <Activity size={15} />
-
-          {sentiment}
-
-        </div>
-
-        {/* Insight */}
-        <p
-          className="
-
-            text-sm
-
-            text-gray-300
-
-            leading-relaxed
-
-            mt-5
-
-          "
-        >
-
-          {positive
-
-            ? `${stock?.symbol} is showing strong momentum with increasing buying activity and positive short-term investor sentiment.`
-
-            : `${stock?.symbol} is facing selling pressure due to weaker short-term market sentiment and cautious investor positioning.`
-
-          }
-
+        <p className="text-xs text-gray-400 leading-relaxed">
+          {isPositive
+            ? `${stock?.shortName || stock?.symbol} is displaying strong positive momentum today with high buying volume. Setting a profit target alert will help capture target exits automatically.`
+            : `${stock?.shortName || stock?.symbol} is undergoing short-term consolidation. A downward price alert can signal favorable accumulation dip zones.`}
         </p>
-
       </Card>
-
-      {/* Market News */}
-      <Card>
-
-        <div className="flex items-center gap-3 mb-6">
-
-          <div
-            className="
-
-              w-10 h-10
-
-              rounded-2xl
-
-              bg-blue-500/10
-
-              flex items-center justify-center
-
-              text-blue-400
-
-            "
-          >
-
-            <Newspaper size={18} />
-
-          </div>
-
-          <div>
-
-            <h2 className="text-lg font-bold">
-
-              Latest Market Insights
-
-            </h2>
-
-            <p className="text-xs text-gray-500 mt-1">
-
-              Real-time market intelligence
-
-            </p>
-
-          </div>
-
-        </div>
-
-        {/* News Cards */}
-        <div className="space-y-4">
-
-          {[
-
-            {
-              title:
-                positive
-
-                  ? "Strong institutional buying activity detected"
-
-                  : "Short-term market weakness impacts momentum",
-
-              time: "2h ago"
-            },
-
-            {
-              title:
-                positive
-
-                  ? "Technical indicators remain positive for near term"
-
-                  : "Investors remain cautious amid market volatility",
-
-              time: "5h ago"
-            },
-
-            {
-              title:
-                positive
-
-                  ? "Sector momentum supports bullish continuation"
-
-                  : "Profit booking observed across related sectors",
-
-              time: "8h ago"
-            }
-
-          ].map((news, index) => (
-
-            <motion.div
-
-              key={index}
-
-              whileHover={{
-                x: 4
-              }}
-
-              className="
-
-                rounded-2xl
-
-                border border-white/4
-
-                bg-white/3
-
-                p-4
-
-                cursor-pointer
-
-                transition-all
-
-              "
-
-            >
-
-              <p
-                className="
-
-                  text-sm
-
-                  leading-relaxed
-
-                  text-white
-
-                "
-              >
-
-                {news.title}
-
-              </p>
-
-              <p className="text-xs text-gray-500 mt-3">
-
-                {news.time}
-
-              </p>
-
-            </motion.div>
-
-          ))}
-
-        </div>
-
-      </Card>
-
     </div>
-
   );
-
 }
 
 export default StockInsights;

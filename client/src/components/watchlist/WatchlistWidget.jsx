@@ -1,44 +1,44 @@
+// client/src/components/watchlist/WatchlistWidget.jsx
 import Card from "../ui/Card";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparklines, SparklinesLine } from "react-sparklines";
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { getWatchlist, removeFromWatchlist } from "../../services/watchlistService";
 import { getLiveStocks } from "../../services/stockService";
 import useWatchlistStore from "../../store/watchlistStore";
-import { Trash2, Bell } from "lucide-react";
+import { Trash2, Bell, Bookmark, ArrowRight, TrendingUp, TrendingDown, Plus } from "lucide-react";
 import CreateAlertModal from "../alerts/CreateAlertModal";
-import { useNavigate } from "react-router-dom";
-import StockLogo from "../ui/StockLogo";
-function symbolInitials(symbol = "") {
-  return symbol.replace(".NS", "").replace(".BO", "").slice(0, 2).toUpperCase();
-}
+import toast from "react-hot-toast";
 
-function cleanSymbol(symbol = "") {
-  return symbol.replace(".NS", "").replace(".BO", "");
+function cleanSymbol(sym = "") {
+  return sym.replace(".NS", "").replace(".BO", "").toUpperCase();
 }
 
 function WatchlistWidget() {
-  const { watchlist: stocks, setWatchlist, removeStock } = useWatchlistStore();
+  const { watchlist, setWatchlist, removeStock } = useWatchlistStore();
   const [loading, setLoading] = useState(true);
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => { fetchWatchlist(); }, []);
+  useEffect(() => {
+    fetchWatchlist();
+  }, []);
 
   useEffect(() => {
-    if (!stocks?.length) return;
+    if (!watchlist?.length) return;
     fetchLivePrices();
-    const interval = setInterval(fetchLivePrices, 10000);
+    const interval = setInterval(fetchLivePrices, 15000);
     return () => clearInterval(interval);
-  }, [stocks.length]);
+  }, [watchlist.length]);
 
   const fetchWatchlist = async () => {
     try {
       const data = await getWatchlist();
       setWatchlist(data);
-    } catch (error) {
-      console.log("Watchlist Fetch Error:", error);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -46,152 +46,166 @@ function WatchlistWidget() {
 
   const fetchLivePrices = async () => {
     try {
-      const symbols = stocks.map((s) => s.symbol);
+      const symbols = watchlist.map((s) => s.symbol);
       const liveData = await getLiveStocks(symbols);
-      const updated = stocks.map((stock) => {
+      const updated = watchlist.map((stock) => {
         const live = liveData.find((item) => item.symbol === stock.symbol);
         if (!live) return stock;
         return {
           ...stock,
           price: `₹${live.price?.toFixed(2)}`,
-          change: `${live.change?.toFixed(2)}%`,
+          change: `${live.change >= 0 ? "+" : ""}${live.change?.toFixed(2)}%`,
           positive: live.positive,
         };
       });
       setWatchlist(updated);
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const handleOpenAlert = (stock) => {
+  const handleOpenAlert = (e, stock) => {
+    e.stopPropagation();
     setSelectedStock(stock);
     setAlertModalOpen(true);
   };
 
-  const handleRemove = async (id) => {
+  const handleRemove = async (e, id, symbol) => {
+    e.stopPropagation();
     try {
       removeStock(id);
       await removeFromWatchlist(id);
-    } catch (error) {
-      console.log(error);
+      toast.success(`${cleanSymbol(symbol)} removed from watchlist`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to remove from watchlist");
       fetchWatchlist();
     }
   };
 
-  if (loading) {
-    return (
-      <Card className="lg:col-span-4">
-        <div className="animate-pulse">
-          <div className="h-5 w-28 rounded bg-white/10 mb-5" />
-          <div className="space-y-3">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-14 rounded-xl bg-white/5" />
-            ))}
-          </div>
-        </div>
-      </Card>
-    );
-  }
+  const previewStocks = (watchlist || []).slice(0, 5);
 
   return (
-    <Card id="watchlist" className="lg:col-span-4 overflow-hidden">
+    <Card id="watchlist" className="lg:col-span-6 flex flex-col justify-between">
+      <div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+              <Bookmark size={18} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">Watchlist</h2>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                {watchlist.length} tracked equities
+              </p>
+            </div>
+          </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-base font-bold">Watchlist</h2>
-          <p className="text-[11px] text-gray-500 mt-0.5">Your tracked stocks</p>
+          <Link
+            to="/watchlist"
+            className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
+          >
+            View All <ArrowRight size={13} />
+          </Link>
         </div>
 
-        {/* FIX #5 — navigate to /watchlist instead of scroll-to-self */}
-        <button
-          onClick={() => navigate("/watchlist")}
-          className="text-green-400 text-xs hover:text-green-300 transition-colors"
-        >
-          View All →
-        </button>
-      </div>
+        {/* Stock List */}
+        <div className="space-y-2">
+          {loading ? (
+            [0, 1, 2].map((i) => (
+              <div key={i} className="h-14 rounded-2xl bg-white/5 animate-pulse" />
+            ))
+          ) : previewStocks.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/10 py-8 text-center">
+              <Bookmark size={22} className="text-gray-600 mx-auto mb-2" />
+              <p className="text-xs text-gray-400 font-medium">No stocks in watchlist</p>
+              <p className="text-[11px] text-gray-600 mt-0.5">
+                Use the search bar above to add stocks to track
+              </p>
+            </div>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {previewStocks.map((stock) => {
+                const sym = cleanSymbol(stock.symbol);
+                return (
+                  <motion.div
+                    key={stock._id}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: 40 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => navigate(`/stock/${sym}`)}
+                    className="flex items-center justify-between p-3 rounded-2xl bg-[#080d1a]/50 hover:bg-[#080d1a] border border-white/[0.04] hover:border-white/10 transition-all cursor-pointer group"
+                  >
+                    {/* Left Symbol & Name */}
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-[10px] flex items-center justify-center shrink-0">
+                        {sym.slice(0, 2)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[13px] font-bold text-white group-hover:text-emerald-400 transition-colors">
+                            {sym}
+                          </span>
+                          <span className="text-[9px] font-semibold text-gray-500">NSE</span>
+                        </div>
+                        <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                          {stock.name}
+                        </p>
+                      </div>
+                    </div>
 
-      {/* Empty state */}
-      {stocks?.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-white/10 py-10 text-center">
-          <p className="text-gray-400 text-sm">No stocks in watchlist</p>
+                    {/* Sparkline mini chart */}
+                    <div className="w-16 h-7 shrink-0 mx-2 hidden sm:block">
+                      <Sparklines data={stock.data || [20, 25, 22, 30, 28, 35]} margin={2}>
+                        <SparklinesLine
+                          color={stock.positive ? "#10b981" : "#f43f5e"}
+                          style={{ fill: "none", strokeWidth: 2 }}
+                        />
+                      </Sparklines>
+                    </div>
+
+                    {/* Price and actions */}
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <div className="text-right">
+                        <p className="text-[13px] font-extrabold text-white">
+                          {stock.price || "—"}
+                        </p>
+                        <p
+                          className={`text-[11px] font-bold ${
+                            stock.positive ? "text-emerald-400" : "text-rose-400"
+                          }`}
+                        >
+                          {stock.change || "0.00%"}
+                        </p>
+                      </div>
+
+                      {/* Quick alert */}
+                      <button
+                        onClick={(e) => handleOpenAlert(e, stock)}
+                        className="w-7 h-7 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                        title="Set Alert"
+                      >
+                        <Bell size={13} />
+                      </button>
+
+                      {/* Remove */}
+                      <button
+                        onClick={(e) => handleRemove(e, stock._id, stock.symbol)}
+                        className="w-7 h-7 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                        title="Remove from Watchlist"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          )}
         </div>
-      )}
-
-      {/* Stock rows */}
-      <div className="space-y-1">
-        <AnimatePresence mode="popLayout">
-          {stocks?.map((stock) => (
-            <motion.div
-              layout
-              key={stock._id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: 50 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => navigate(`/stock/${stock.symbol}`)}
-              whileHover={{ backgroundColor: "rgba(255,255,255,0.03)" }}
-              className="group flex items-center justify-between rounded-xl
-                         px-3 py-2.5 transition-all cursor-pointer min-w-0"
-            >
-              {/* LEFT */}
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <StockLogo symbol={stock.symbol} name={stock.name} size={36} />
-                <div className="min-w-0">
-                  <p className="text-[13px] font-bold text-white leading-none mb-0.5">
-                    {cleanSymbol(stock.symbol)}
-                  </p>
-                  <p className="text-[11px] text-gray-500 truncate leading-none max-w-[120px]">
-                    {stock.name}
-                  </p>
-                </div>
-              </div>
-
-              {/* SPARKLINE */}
-              <div className="w-16 h-8 shrink-0 mx-2">
-                <Sparklines data={stock.data || [5, 6, 7, 5, 8, 7, 9]} margin={2}>
-                  <SparklinesLine
-                    color={stock.positive ? "#22c55e" : "#f87171"}
-                    style={{ fill: "none" }}
-                  />
-                </Sparklines>
-              </div>
-
-              {/* RIGHT */}
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="text-right min-w-[72px]">
-                  <p className="text-[13px] font-bold text-white leading-none mb-0.5">
-                    {stock.price || "—"}
-                  </p>
-                  <p className={`text-[11px] font-semibold leading-none
-                    ${stock.positive ? "text-green-400" : "text-red-400"}`}>
-                    {stock.positive ? "▲" : "▼"} {stock.change || "0.00%"}
-                  </p>
-                </div>
-
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleOpenAlert(stock); }}
-                  className="opacity-0 group-hover:opacity-100 transition-all w-8 h-8
-                             rounded-lg flex items-center justify-center
-                             bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 shrink-0"
-                >
-                  <Bell size={14} />
-                </button>
-
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleRemove(stock._id); }}
-                  className="opacity-0 group-hover:opacity-100 transition-all w-8 h-8
-                             rounded-lg flex items-center justify-center
-                             bg-red-500/10 hover:bg-red-500/20 text-red-400 shrink-0"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
       </div>
 
       <CreateAlertModal

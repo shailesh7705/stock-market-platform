@@ -1,108 +1,110 @@
+// client/src/components/dashboard/PortfolioOverview.jsx
 import Card from "../ui/Card";
-import { Wallet, TrendingUp, PieChart, Bell } from "lucide-react";
+import { Bell, Bookmark, TrendingUp, CheckCircle2, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import useAlertStore from "../../store/alertStore";
-import { useNavigate } from "react-router-dom";
+import useWatchlistStore from "../../store/watchlistStore";
 
 function PortfolioOverview() {
   const { alerts } = useAlertStore();
-  const navigate = useNavigate();
+  const { watchlist } = useWatchlistStore();
 
-  // FIX #7 — split active vs triggered
-  const totalAlerts    = alerts?.length || 0;
+  const totalAlerts = alerts?.length || 0;
   const triggeredCount = alerts?.filter((a) => a.triggered).length || 0;
-  const activeCount    = totalAlerts - triggeredCount;
+  const activeAlertsCount = totalAlerts - triggeredCount;
+  const watchlistCount = watchlist?.length || 0;
 
-  const stats = [
-    {
-      title: "Portfolio Value",
-      value: "Coming Soon",
-      sub: "Advanced portfolio analytics arriving soon",
-      icon: <Wallet size={18} />,
-      iconBg: "bg-green-500/15",
-      iconColor: "text-green-400",
-      comingSoon: true,
-    },
-    {
-      title: "Today's P&L",
-      value: "Coming Soon",
-      sub: "Realtime P&L tracking coming soon",
-      icon: <TrendingUp size={18} />,
-      iconBg: "bg-blue-500/15",
-      iconColor: "text-blue-400",
-      comingSoon: true,
-    },
-    {
-      title: "Total Investment",
-      value: "Coming Soon",
-      sub: "Investment insights will be available soon",
-      icon: <PieChart size={18} />,
-      iconBg: "bg-purple-500/15",
-      iconColor: "text-purple-400",
-      comingSoon: true,
-    },
+  // Find top gainer in watchlist
+  const positiveStocks = (watchlist || []).filter((s) => s.positive);
+
+  const metrics = [
     {
       title: "Active Alerts",
-      value: totalAlerts,
-      icon: <Bell size={18} />,
-      iconBg: "bg-yellow-500/15",
-      iconColor: "text-yellow-400",
-      isAlerts: true,
+      value: activeAlertsCount,
+      sub: "Monitored every 60s via NSE cron",
+      icon: Bell,
+      iconColor: "text-amber-400",
+      iconBg: "bg-amber-500/10 border-amber-500/20",
+      link: "/alerts",
+      badge: "Email Active",
+      badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    },
+    {
+      title: "Targets Hit",
+      value: triggeredCount,
+      sub: "Price conditions triggered & dispatched",
+      icon: CheckCircle2,
+      iconColor: "text-emerald-400",
+      iconBg: "bg-emerald-500/10 border-emerald-500/20",
+      link: "/alerts",
+      badge: `${triggeredCount} Hit`,
+      badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    },
+    {
+      title: "Watchlist Tracked",
+      value: watchlistCount,
+      sub: `${positiveStocks.length} currently in profit today`,
+      icon: Bookmark,
+      iconColor: "text-blue-400",
+      iconBg: "bg-blue-500/10 border-blue-500/20",
+      link: "/watchlist",
+      badge: "Realtime",
+      badgeColor: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    },
+    {
+      title: "Market Status",
+      value: "NSE Live",
+      sub: "Trading hours 09:15 – 15:30 IST",
+      icon: TrendingUp,
+      iconColor: "text-purple-400",
+      iconBg: "bg-purple-500/10 border-purple-500/20",
+      link: "/dashboard#market-movers",
+      badge: "Equities",
+      badgeColor: "bg-purple-500/10 text-purple-400 border-purple-500/20",
     },
   ];
 
   return (
-    <div className="lg:col-span-12 grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {stats.map((item, index) => (
-        <Card
-          key={index}
-          // FIX #2 — tighter padding
-          className="px-4 py-3"
-          onClick={item.isAlerts ? () => document.getElementById("alerts")
-            ?.scrollIntoView({ behavior: "smooth" }) : undefined}
-          style={item.isAlerts ? { cursor: "pointer" } : undefined}
-        >
-          <div className="flex items-start gap-3">
-            {/* Icon */}
-            <div className={`${item.iconBg} ${item.iconColor} p-2 rounded-xl shrink-0`}>
-              {item.icon}
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] text-gray-400 mb-1">{item.title}</p>
-
-              {/* FIX #2 — smaller value text for coming soon */}
-              <h2 className={`font-bold leading-tight
-                ${item.comingSoon
-                  ? "text-[15px] text-gray-400"
-                  : "text-[22px] text-white"}`}>
-                {item.value}
-              </h2>
-
-              {/* FIX #7 — alerts card shows split */}
-              {item.isAlerts ? (
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md
-                                   bg-yellow-500/10 text-yellow-400">
-                    {activeCount} active
-                  </span>
-                  {triggeredCount > 0 && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md
-                                     bg-green-500/10 text-green-400">
-                      {triggeredCount} hit
-                    </span>
-                  )}
+    <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {metrics.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Link key={item.title} to={item.link} className="block group">
+            <Card className="p-4.5 hover:border-white/20 transition-all">
+              <div className="flex items-start justify-between mb-3">
+                <div
+                  className={`w-10 h-10 rounded-2xl border flex items-center justify-center ${item.iconBg} ${item.iconColor}`}
+                >
+                  <Icon size={18} />
                 </div>
-              ) : (
-                item.sub && (
-                  <p className="text-[10px] text-gray-600 mt-1 leading-snug">
-                    {item.sub}
-                  </p>
-                )
-              )}
-            </div>
-          </div>
-        </Card>
-      ))}
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${item.badgeColor}`}
+                >
+                  {item.badge}
+                </span>
+              </div>
+
+              <div>
+                <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">
+                  {item.title}
+                </p>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <h3 className="text-2xl font-extrabold text-white tracking-tight">
+                    {item.value}
+                  </h3>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1 flex items-center justify-between">
+                  <span>{item.sub}</span>
+                  <ArrowRight
+                    size={12}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-400"
+                  />
+                </p>
+              </div>
+            </Card>
+          </Link>
+        );
+      })}
     </div>
   );
 }

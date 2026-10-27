@@ -1,0 +1,24 @@
+{
+  "name": "stock-market-platform",
+  "version": "1.0.0",
+  "description": "StockPulse - Real-time Indian Stock Market Intelligence and Price Alert System",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "build": "npm run build --prefix client",
+    "server": "node server/index.js",
+    "client:dev": "npm run dev --prefix client",
+    "client:build": "npm run build --prefix client",
+    "server:dev": "npm run dev --prefix server"
+  },
+  "keywords": [
+    "stocks",
+    "nse",
+    "price-alerts",
+    "fintech",
+    "tickertape",
+    "indmoney"
+  ],
+  "author": "Shailesh",
+  "license": "ISC"
+}

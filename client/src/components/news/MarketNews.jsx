@@ -1,249 +1,95 @@
-import {
-
-  useEffect,
-  useState
-
-} from "react";
-
-import {
-
-  Newspaper,
-  ExternalLink
-
-} from "lucide-react";
-
-import {
-
-  motion
-
-} from "framer-motion";
-
+// client/src/components/news/MarketNews.jsx
+import { useEffect, useState } from "react";
+import { Newspaper, ExternalLink, Clock } from "lucide-react";
+import { motion } from "framer-motion";
 import Card from "../ui/Card";
+import { getMarketNews } from "../../services/newsService";
 
-import {
-
-  getMarketNews
-
-} from "../../services/newsService";
+function formatNewsTime(publishedAt) {
+  if (!publishedAt) return "";
+  const diff = Math.floor((Date.now() - new Date(publishedAt)) / 60000);
+  if (diff < 60) return `${diff}m ago`;
+  const h = Math.floor(diff / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
 
 function MarketNews() {
-
-  const [news, setNews] =
-    useState([]);
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-
     fetchNews();
-
   }, []);
 
   const fetchNews = async () => {
-
     try {
-
-      const data =
-        await getMarketNews();
-
-      setNews(data);
-
-    } catch (error) {
-
-      console.log(error);
-
+      const data = await getMarketNews();
+      if (Array.isArray(data)) setNews(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-
   };
 
   return (
-
-    <Card className="lg:col-span-6">
-
+    <Card id="news" className="lg:col-span-12">
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
-
-        <div
-          className="
-
-            w-10 h-10
-
-            rounded-2xl
-
-            bg-blue-500/10
-
-            flex items-center justify-center
-
-            text-blue-400
-
-          "
-        >
-
+        <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
           <Newspaper size={18} />
-
         </div>
-
         <div>
-
-          <h2 className="text-base font-bold">
-
-            Market News
-
-          </h2>
-
-          <p className="text-[11px] text-gray-500 mt-1">
-
-            Live market intelligence
-
-          </p>
-
+          <h2 className="text-base font-bold text-white">Market Intelligence & News</h2>
+          <p className="text-[11px] text-gray-500 mt-0.5">Live curated Indian business updates</p>
         </div>
-
       </div>
 
-      {/* News List */}
-      <div className="space-y-3">
+      {/* News Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {loading ? (
+          [0, 1, 2].map((i) => (
+            <div key={i} className="h-32 rounded-2xl bg-white/5 animate-pulse" />
+          ))
+        ) : (
+          news.slice(0, 6).map((article, idx) => (
+            <motion.a
+              key={idx}
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ y: -3 }}
+              className="flex flex-col justify-between p-4 rounded-2xl bg-[#080d1a]/50 hover:bg-[#080d1a] border border-white/[0.04] hover:border-white/15 transition-all group"
+            >
+              <div>
+                <div className="flex items-center justify-between text-[11px] text-emerald-400 font-bold mb-2">
+                  <span>{article.source}</span>
+                  <div className="flex items-center gap-1 text-gray-500 font-normal">
+                    <Clock size={11} />
+                    <span>{formatNewsTime(article.publishedAt)}</span>
+                  </div>
+                </div>
 
-        {news.map((article, index) => (
+                <h3 className="text-[13px] font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 leading-snug">
+                  {article.title}
+                </h3>
 
-          <motion.a
-
-            key={index}
-
-            href={article.url}
-
-            target="_blank"
-
-            rel="noreferrer"
-
-            whileHover={{
-              y: -2
-            }}
-
-            className="
-
-              flex gap-4
-
-              rounded-2xl
-
-              border border-white/4
-
-              bg-white/3
-
-              p-3
-
-              hover:bg-white/5
-
-              transition-all
-
-            "
-
-          >
-
-            {/* Image */}
-            <img
-
-              src={
-
-                article.image ||
-
-                "https://placehold.co/120x80"
-
-              }
-
-              alt="news"
-
-              className="
-
-                w-28 h-20
-
-                rounded-xl
-
-                object-cover
-
-                shrink-0
-
-              "
-
-            />
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-
-              <div className="flex items-center justify-between gap-3">
-
-                <p
-                  className="
-
-                    text-xs
-
-                    text-green-400
-
-                    font-medium
-
-                  "
-                >
-
-                  {article.source}
-
+                <p className="text-[11px] text-gray-400 line-clamp-2 mt-1.5 leading-relaxed">
+                  {article.description}
                 </p>
-
-                <ExternalLink
-
-                  size={14}
-
-                  className="text-gray-500"
-
-                />
-
               </div>
 
-              <h3
-                className="
-
-                  text-sm
-
-                  font-semibold
-
-                  mt-2
-
-                  line-clamp-2
-
-                "
-              >
-
-                {article.title}
-
-              </h3>
-
-              <p
-                className="
-
-                  text-xs
-
-                  text-gray-500
-
-                  mt-2
-
-                  line-clamp-2
-
-                "
-              >
-
-                {article.description}
-
-              </p>
-
-            </div>
-
-          </motion.a>
-
-        ))}
-
+              <div className="pt-3 mt-3 border-t border-white/[0.04] flex items-center justify-between text-[11px] text-gray-500 group-hover:text-gray-300">
+                <span>Read Full Coverage</span>
+                <ExternalLink size={12} className="text-emerald-400" />
+              </div>
+            </motion.a>
+          ))
+        )}
       </div>
-
     </Card>
-
   );
-
 }
 
 export default MarketNews;
