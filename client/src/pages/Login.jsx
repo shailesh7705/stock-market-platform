@@ -1,6 +1,6 @@
 // client/src/pages/Login.jsx
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, Zap, Lock, Mail, ArrowRight, Sparkles, ShieldCheck, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Zap, Activity, Lock, Mail, ArrowRight, Sparkles, ShieldCheck, AlertCircle } from "lucide-react";
 import { loginUser } from "../services/authService";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import useAuthStore from "../store/authStore";
@@ -59,11 +59,20 @@ function Login({ isModal = false, onSwitchToSignup }) {
     <div className="w-full">
       {!isModal && (
         <div className="text-center mb-6">
-          <Link to="/" className="inline-flex items-center gap-2 mb-4 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 flex items-center justify-center text-black shadow-lg shadow-amber-500/25">
-              <Zap size={18} className="fill-current text-black" />
+          <Link to="/" className="inline-flex items-center gap-2.5 mb-4 group select-none">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 p-0.5 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:shadow-amber-500/40 group-hover:scale-105 transition-all">
+              <div className="w-full h-full bg-[#080d1a] rounded-[10px] flex items-center justify-center">
+                <Activity size={18} className="text-amber-400 group-hover:scale-110 transition-transform" />
+              </div>
             </div>
-            <span className="text-xl font-extrabold text-white tracking-tight group-hover:text-amber-400 transition-colors">StockPulse</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-extrabold text-white tracking-tight group-hover:text-amber-400 transition-colors">
+                StockPulse
+              </span>
+              <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono tracking-wider">
+                PRO
+              </span>
+            </div>
           </Link>
           <h1 className="text-2xl font-bold text-white tracking-tight">Welcome Back</h1>
           <p className="text-xs text-gray-400 mt-1">

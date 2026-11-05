@@ -197,8 +197,8 @@ export default function TopNavbar({ onOpenMobileMenu }) {
   return (
     <header className="sticky top-0 z-50 h-16 w-full border-b border-white/[0.08] bg-[#080b11]/95 backdrop-blur-xl shrink-0 px-3 sm:px-6">
       <div className="h-full max-w-7xl mx-auto flex items-center justify-between gap-3">
-        {/* ── Zone 1: Logo & Nav Links ── */}
-        <div className="flex items-center gap-4 lg:gap-6 min-w-0">
+        {/* ── Zone 1: Logo & Nav Links (Never Compressed) ── */}
+        <div className="flex items-center gap-3 lg:gap-4 shrink-0">
           {/* Mobile hamburger button */}
           <button
             onClick={onOpenMobileMenu}
@@ -229,14 +229,14 @@ export default function TopNavbar({ onOpenMobileMenu }) {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1 pl-3 border-l border-white/[0.08]">
+          <nav className="hidden lg:flex items-center gap-1 pl-3 border-l border-white/[0.08] shrink-0">
             {navLinks.map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.label}
                   onClick={() => (item.action ? item.action() : navigate(item.path))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all select-none ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all select-none whitespace-nowrap shrink-0 ${
                     item.isActive
                       ? "bg-white/10 text-white shadow-xs border border-white/10"
                       : "text-gray-400 hover:text-white hover:bg-white/[0.04]"
@@ -262,18 +262,18 @@ export default function TopNavbar({ onOpenMobileMenu }) {
         </div>
 
         {/* ── Zone 2: Command Palette Search Trigger (Non-Intrusive, Balanced Width) ── */}
-        <div className="flex-1 max-w-[150px] sm:max-w-[220px] md:max-w-xs lg:max-w-sm mx-1 sm:mx-3 shrink">
+        <div className="flex-1 max-w-[160px] sm:max-w-[200px] md:max-w-xs lg:max-w-sm mx-1 sm:mx-3 shrink min-w-0">
           <StockSearch />
         </div>
 
         {/* ── Zone 3: Market Status & User Controls ── */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Live Market Indices Ticker (Desktop / Wide screens) */}
-          <div className="hidden xl:flex items-center gap-2.5 pr-2 border-r border-white/[0.08]">
-            {marketData.slice(0, 2).map((market) => (
+          <div className="hidden xl:flex items-center gap-2 pr-2 border-r border-white/[0.08]">
+            {marketData.slice(0, 1).map((market) => (
               <div
                 key={market.symbol}
-                className="flex items-center gap-1.5 bg-[#0e1422] border border-white/5 px-2.5 py-1 rounded-xl font-mono text-xs"
+                className="flex items-center gap-1.5 bg-[#0e1422] border border-white/5 px-2.5 py-1 rounded-xl font-mono text-xs shrink-0"
               >
                 <span className="text-[10px] text-gray-400 font-sans font-bold">
                   {market.name === "NIFTY 50" ? "NIFTY" : "SENSEX"}
@@ -293,8 +293,32 @@ export default function TopNavbar({ onOpenMobileMenu }) {
               </div>
             ))}
 
+            {/* SENSEX shown on 2xl */}
+            {marketData.slice(1, 2).map((market) => (
+              <div
+                key={market.symbol}
+                className="hidden 2xl:flex items-center gap-1.5 bg-[#0e1422] border border-white/5 px-2.5 py-1 rounded-xl font-mono text-xs shrink-0"
+              >
+                <span className="text-[10px] text-gray-400 font-sans font-bold">
+                  SENSEX
+                </span>
+                <span className="text-white font-bold">
+                  {market.price ? Number(market.price).toLocaleString("en-IN") : "—"}
+                </span>
+                <span
+                  className={`text-[10px] font-bold flex items-center gap-0.5 ${
+                    market.positive ? "text-emerald-400" : "text-rose-400"
+                  }`}
+                >
+                  {market.positive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                  {market.change >= 0 ? "+" : ""}
+                  {market.change ? market.change.toFixed(2) : "0.00"}%
+                </span>
+              </div>
+            ))}
+
             {/* Market Live Status Pill */}
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] font-bold">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] font-bold shrink-0">
               <span
                 className={`w-2 h-2 rounded-full ${
                   marketOpen ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
@@ -305,17 +329,17 @@ export default function TopNavbar({ onOpenMobileMenu }) {
               </span>
             </div>
 
-            {/* Live IST Clock */}
-            <div className="flex items-center gap-1 text-[11px] text-gray-400 font-mono">
+            {/* Live IST Clock on 2xl */}
+            <div className="hidden 2xl:flex items-center gap-1 text-[11px] text-gray-400 font-mono shrink-0">
               <Clock size={11} className="text-gray-500" />
               <span>{formattedTime}</span>
             </div>
           </div>
 
-          {/* Quick Watchlist Shortcut Pill */}
+          {/* Quick Watchlist Shortcut Pill (Mobile & Tablet only) */}
           <Link
             to="/watchlist"
-            className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#0e1422] hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-300 hover:text-white transition-all select-none"
+            className="hidden sm:flex lg:hidden items-center gap-1.5 h-9 px-3 rounded-xl bg-[#0e1422] hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-300 hover:text-white transition-all select-none"
             title="My Watchlist"
           >
             <Bookmark size={14} className="text-cyan-400" />

@@ -5,6 +5,7 @@ import {
   X,
   ArrowRight,
   Zap,
+  Activity,
   Bell,
   CheckCircle2,
   ShieldCheck,
@@ -39,15 +40,22 @@ function Home() {
       <nav className="w-full h-20 border-b border-white/[0.08] bg-[#0b1120]/80 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-7xl mx-auto h-full px-6 lg:px-10 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 flex items-center justify-center text-black shadow-lg shadow-amber-500/25 group-hover:scale-105 transition-transform">
-              <Zap size={20} className="fill-current text-black" />
+          <Link to="/" className="flex items-center gap-3 group select-none">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 p-0.5 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:shadow-amber-500/40 group-hover:scale-105 transition-all">
+              <div className="w-full h-full bg-[#080d1a] rounded-[14px] flex items-center justify-center">
+                <Activity size={20} className="text-amber-400 group-hover:scale-110 transition-transform" />
+              </div>
             </div>
             <div>
-              <span className="text-xl font-extrabold text-white tracking-tight leading-none block group-hover:text-amber-400 transition-colors">
-                StockPulse
-              </span>
-              <span className="text-[10px] font-semibold text-amber-400 tracking-wider uppercase block mt-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xl font-extrabold text-white tracking-tight leading-none block group-hover:text-amber-400 transition-colors">
+                  StockPulse
+                </span>
+                <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono tracking-wider">
+                  PRO
+                </span>
+              </div>
+              <span className="text-[10px] font-semibold text-amber-400 tracking-wider uppercase block mt-1">
                 NSE Terminal & Intelligence
               </span>
             </div>
@@ -218,9 +226,11 @@ function Home() {
       {/* ── Footer ─────────────────────────────────────────────────────── */}
       <footer className="w-full border-t border-white/[0.08] bg-[#070b16] py-10 px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center text-black font-extrabold text-xs">
-              ⚡
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 p-0.5 flex items-center justify-center shadow-md shadow-amber-500/25">
+              <div className="w-full h-full bg-[#070b16] rounded-[5px] flex items-center justify-center">
+                <Activity size={12} className="text-amber-400" />
+              </div>
             </div>
             <span className="font-bold text-white">StockPulse</span> · NSE Realtime Price Alerts
           </div>
@@ -248,10 +258,17 @@ function Home() {
             {/* Modal Header */}
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black font-extrabold text-sm">
-                  <Zap size={16} className="fill-current" />
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 p-0.5 flex items-center justify-center shadow-lg shadow-amber-500/25">
+                  <div className="w-full h-full bg-[#0e1626] rounded-[10px] flex items-center justify-center">
+                    <Activity size={16} className="text-amber-400" />
+                  </div>
                 </div>
-                <span className="text-base font-extrabold text-white">StockPulse</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-base font-extrabold text-white">StockPulse</span>
+                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono tracking-wider">
+                    PRO
+                  </span>
+                </div>
               </div>
               <h2 className="text-xl font-bold text-white">
                 {modalType === "login" ? "Sign In to Your Account" : "Create Free Account"}

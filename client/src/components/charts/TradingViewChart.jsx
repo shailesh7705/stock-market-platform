@@ -491,6 +491,7 @@ export default function TradingViewChart({
           fixRightEdge: true,
           lockVisibleTimeRangeOnResize: true,
           rightOffset: 2,
+          minBarSpacing: 3,
         },
         rightPriceScale: {
           borderColor: "rgba(255, 255, 255, 0.08)",
@@ -558,6 +559,7 @@ export default function TradingViewChart({
           fixRightEdge: true,
           lockVisibleTimeRangeOnResize: true,
           rightOffset: 2,
+          minBarSpacing: 3,
         },
         rightPriceScale: {
           borderColor: "rgba(255, 255, 255, 0.08)",

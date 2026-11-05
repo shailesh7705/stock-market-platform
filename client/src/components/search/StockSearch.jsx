@@ -167,7 +167,7 @@ export default function StockSearch({ inline = false, placeholder = "Search 2,36
         </div>
 
         {/* Keyboard shortcut hint badge */}
-        <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-white/[0.05] border border-white/10 text-[10px] font-mono text-gray-400 font-semibold group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-colors shrink-0">
+        <kbd className="hidden xl:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-white/[0.05] border border-white/10 text-[10px] font-mono text-gray-400 font-semibold group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-colors shrink-0">
           <span>Ctrl</span>
           <span>K</span>
         </kbd>
