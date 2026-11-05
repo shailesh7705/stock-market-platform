@@ -40,6 +40,19 @@ function setCache(key, data, ttl) {
   cache[key] = { data, time: Date.now(), ttl };
 }
 
+// ─── Dividend Yield Normalizer ────────────────────────────────────────────────
+function parseDividendYield(raw) {
+  if (raw === null || raw === undefined || isNaN(raw) || Number(raw) <= 0) return null;
+  const num = Number(raw);
+  if (num < 0.15) {
+    return Number((num * 100).toFixed(2));
+  }
+  if (num <= 30) {
+    return Number(num.toFixed(2));
+  }
+  return Number((num / 100).toFixed(2));
+}
+
 // ─── Safe Quote Helper with Timeout ───────────────────────────────────────────
 async function safeQuote(symbolOrSymbols, timeoutMs = 8000) {
   try {
@@ -338,7 +351,7 @@ const getLiveStocks = async (req, res) => {
           fiftyTwoWeekLow: quote.fiftyTwoWeekLow || null,
           fiftyTwoWeekChangePercent: quote.fiftyTwoWeekChangePercent || null,
           trailingPE: quote.trailingPE || null,
-          dividendYield: quote.dividendYield ? quote.dividendYield * 100 : null,
+          dividendYield: parseDividendYield(quote.dividendYield || quote.trailingAnnualDividendYield),
           currency: quote.currency || "INR",
           exchange: quote.fullExchangeName || "NSE",
         };
@@ -586,6 +599,10 @@ async function fetchSingleStockDetails(rawSymbol) {
     ? Number((((stockPE - sectorMedianPE) / sectorMedianPE) * 100).toFixed(2))
     : null;
 
+  // Dividend Yield normalization
+  const rawDividendYield = summaryDetail?.dividendYield ?? quote?.dividendYield ?? financialData?.dividendYield ?? null;
+  const dividendYield = parseDividendYield(rawDividendYield);
+
   // Calculate PulseScore
   const pulseScore = calculatePulseScore(summary, livePrice);
 
@@ -612,6 +629,7 @@ async function fetchSingleStockDetails(rawSymbol) {
     fiftyTwoWeekChangePercent: quote?.fiftyTwoWeekChangePercent || null,
     currency: quote?.currency || "INR",
     exchange: quote?.fullExchangeName || "NSE",
+    dividendYield,
     assetProfile: {
       sector: assetProfile.sector || "N/A",
       industry: assetProfile.industry || "N/A",
@@ -632,11 +650,13 @@ async function fetchSingleStockDetails(rawSymbol) {
       profitMargins: financialData.profitMargins ?? null,
       totalRevenue: financialData.totalRevenue ?? null,
       totalDebt: financialData.totalDebt ?? null,
+      dividendYield,
     },
     defaultKeyStatistics: {
       beta: defaultKeyStats.beta ?? null,
       forwardPE: defaultKeyStats.forwardPE ?? null,
       trailingPE: stockPE ? Number(stockPE.toFixed(2)) : null,
+      dividendYield,
       priceToBook: defaultKeyStats.priceToBook ?? null,
       bookValue: defaultKeyStats.bookValue ?? null,
       pegRatio: defaultKeyStats.pegRatio ?? null,

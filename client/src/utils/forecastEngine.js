@@ -50,8 +50,14 @@ export function calculateForecast(data = {}, livePrice = null, pulseScore = null
   const roe = Math.max(-10, Math.min(60, Number(roeRaw) || 12.0));
 
   let divRaw = data.summaryDetail?.dividendYield ?? financialData.dividendYield ?? data.dividendYield ?? 0;
-  if (Math.abs(divRaw) <= 0.3) divRaw *= 100;
-  const dividendYield = Math.max(0, Math.min(12, Number(divRaw) || 0));
+  let normalizedDiv = 0;
+  if (divRaw && !isNaN(divRaw)) {
+    const num = Number(divRaw);
+    if (num < 0.15) normalizedDiv = num * 100;
+    else if (num <= 30) normalizedDiv = num;
+    else normalizedDiv = num / 100;
+  }
+  const dividendYield = Math.max(0, Math.min(15, normalizedDiv));
 
   // ─────────────────────────────────────────────────────────────
   // 1-YEAR FORECAST (Near-Term Quality-Adjusted Consensus Horizon)

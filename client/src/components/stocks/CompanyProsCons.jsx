@@ -13,7 +13,8 @@ import {
 function CompanyProsCons({ stock }) {
   const price = stock?.price || 0;
   const pe = stock?.trailingPE || 0;
-  const divYield = stock?.dividendYield || 0;
+  let divYield = stock?.dividendYield || 0;
+  if (divYield > 30) divYield = divYield / 100;
   const high52 = stock?.fiftyTwoWeekHigh || price * 1.25;
   const low52 = stock?.fiftyTwoWeekLow || price * 0.75;
   const span52 = high52 - low52 || 1;

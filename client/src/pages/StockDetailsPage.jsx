@@ -89,7 +89,7 @@ function StockDetailsPage() {
           fiftyTwoWeekHigh: detailsData.fiftyTwoWeekHigh,
           fiftyTwoWeekLow: detailsData.fiftyTwoWeekLow,
           trailingPE: detailsData.defaultKeyStatistics?.trailingPE,
-          dividendYield: null,
+          dividendYield: detailsData.dividendYield ?? detailsData.financialData?.dividendYield ?? detailsData.pulseScore?.pillars?.pillar4_sponsorship?.details?.dividendYield?.percent ?? null,
           currency: detailsData.currency,
           exchange: detailsData.exchange,
         });

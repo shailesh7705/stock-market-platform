@@ -327,7 +327,13 @@ function calculatePulseScore(data = {}, livePrice = null) {
   let p4_divScore = 2.0;
   if (rawDiv !== null && !isNaN(rawDiv)) {
     rawDiv = Number(rawDiv);
-    divPct = Math.abs(rawDiv) <= 0.3 ? rawDiv * 100 : rawDiv;
+    if (rawDiv < 0.15) {
+      divPct = rawDiv * 100;
+    } else if (rawDiv <= 30) {
+      divPct = rawDiv;
+    } else {
+      divPct = rawDiv / 100;
+    }
     if (divPct >= 2.0) p4_divScore = 5.0;           // Generous Dividend Income
     else if (divPct >= 1.0) p4_divScore = 4.0;
     else if (divPct >= 0.3) p4_divScore = 2.5;

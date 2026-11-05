@@ -44,7 +44,11 @@ function StockInsights({ stock }) {
 
   const isPositive = stock?.positive;
   const pe = stock?.trailingPE ? stock.trailingPE.toFixed(1) : "—";
-  const divYield = stock?.dividendYield ? `${stock.dividendYield.toFixed(2)}%` : "—";
+  let rawDiv = stock?.dividendYield;
+  if (rawDiv > 30) rawDiv = rawDiv / 100;
+  const divYield = (rawDiv !== null && rawDiv !== undefined && !isNaN(rawDiv) && Number(rawDiv) > 0)
+    ? `${Number(rawDiv).toFixed(2)}%`
+    : "—";
 
   return (
     <div className="space-y-4">
