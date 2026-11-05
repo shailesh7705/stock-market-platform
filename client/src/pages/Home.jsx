@@ -1,5 +1,6 @@
 // client/src/pages/Home.jsx
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   TrendingUp,
   X,
@@ -35,7 +36,7 @@ function Home() {
   const token = localStorage.getItem("token");
 
   return (
-    <div className="min-h-screen bg-[#080d1a] text-white overflow-hidden flex flex-col justify-between">
+    <div className="min-h-screen bg-[#080d1a] text-white overflow-x-hidden flex flex-col justify-between">
       {/* ── Top Navbar ─────────────────────────────────────────────────── */}
       <nav className="w-full h-20 border-b border-white/[0.08] bg-[#0b1120]/80 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-7xl mx-auto h-full px-6 lg:px-10 flex items-center justify-between">
@@ -239,14 +240,14 @@ function Home() {
       </footer>
 
       {/* ── Auth Modal ─────────────────────────────────────────────────── */}
-      {openModal && (
+      {openModal && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-[400] bg-black/80 flex items-center justify-center p-4 overflow-y-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) setOpenModal(false);
           }}
         >
-          <div className="relative w-full max-w-md bg-[#0e1626] border border-white/10 rounded-3xl shadow-2xl shadow-black/80 overflow-hidden p-8 my-auto">
+          <div className="relative w-full max-w-md max-h-[min(92vh,760px)] overflow-y-auto bg-[#0e1626] border border-white/15 rounded-3xl shadow-[0_24px_80px_rgba(0,0,0,0.72)] p-8 my-auto">
             {/* Close Button */}
             <button
               onClick={() => setOpenModal(false)}
@@ -256,7 +257,7 @@ function Home() {
             </button>
 
             {/* Modal Header */}
-            <div className="mb-6">
+            <div className="mb-6 pr-8">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 p-0.5 flex items-center justify-center shadow-lg shadow-amber-500/25">
                   <div className="w-full h-full bg-[#0e1626] rounded-[10px] flex items-center justify-center">
@@ -276,7 +277,7 @@ function Home() {
               <p className="text-xs text-gray-400 mt-1">
                 {modalType === "login"
                   ? "Access your dashboard and live price alerts"
-                  : "Track NSE stocks with automated email notifications"}
+                  : "Tell us your name, email, and password to get started"}
               </p>
             </div>
 
@@ -287,7 +288,8 @@ function Home() {
               <Signup isModal onSwitchToLogin={() => setModalType("login")} />
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

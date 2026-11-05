@@ -2,24 +2,20 @@
 import {
   Bell,
   LogOut,
-  User,
   Clock,
   Menu,
-  X,
   CheckCheck,
   TrendingUp,
   TrendingDown,
   LayoutDashboard,
   Bookmark,
   Activity,
-  Layers,
-  Search,
   Compass,
   ChevronDown,
-  Sparkles,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import StockSearch from "../search/StockSearch";
 import { getMarketIndices } from "../../services/marketService";
@@ -42,6 +38,50 @@ function getInitials(name = "") {
     .join("");
 }
 
+function menuPosition(anchorRef, width, layoutTick) {
+  const el = anchorRef.current;
+  if (!el || typeof window === "undefined" || layoutTick < 0) return null;
+  const rect = el.getBoundingClientRect();
+  const panelWidth = Math.min(width, window.innerWidth - 16);
+  const left = Math.max(8, Math.min(rect.right - panelWidth, window.innerWidth - panelWidth - 8));
+  const top = Math.min(rect.bottom + 8, window.innerHeight - 16);
+  return { top, left, width: panelWidth };
+}
+
+function FloatingMenu({ open, anchorRef, panelRef, width, children }) {
+  const [layoutTick, setLayoutTick] = useState(0);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const refresh = () => setLayoutTick((n) => n + 1);
+    window.addEventListener("resize", refresh);
+    window.addEventListener("scroll", refresh, true);
+    return () => {
+      window.removeEventListener("resize", refresh);
+      window.removeEventListener("scroll", refresh, true);
+    };
+  }, [open]);
+
+  if (!open || typeof document === "undefined") return null;
+  const box = menuPosition(anchorRef, width, layoutTick);
+  if (!box) return null;
+
+  return createPortal(
+    <motion.div
+      ref={panelRef}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 8 }}
+      transition={{ duration: 0.15 }}
+      style={{ position: "fixed", top: box.top, left: box.left, width: box.width, zIndex: 400 }}
+      className="max-h-[min(32rem,calc(100vh-5rem))] overflow-y-auto bg-[#101826] border border-white/15 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.72)]"
+    >
+      {children}
+    </motion.div>,
+    document.body
+  );
+}
+
 export default function TopNavbar({ onOpenMobileMenu }) {
   const [marketData, setMarketData] = useState([]);
   const [marketOpen, setMarketOpen] = useState(true);
@@ -59,6 +99,8 @@ export default function TopNavbar({ onOpenMobileMenu }) {
 
   const profileRef = useRef(null);
   const notifRef = useRef(null);
+  const profilePanelRef = useRef(null);
+  const notifPanelRef = useRef(null);
 
   // Live IST Clock
   useEffect(() => {
@@ -69,31 +111,16 @@ export default function TopNavbar({ onOpenMobileMenu }) {
   // Close menus on outside click
   useEffect(() => {
     const handler = (e) => {
-      if (profileRef.current && !profileRef.current.contains(e.target)) {
-        setShowProfileMenu(false);
-      }
-      if (notifRef.current && !notifRef.current.contains(e.target)) {
-        setShowNotifications(false);
-      }
+      const target = e.target;
+      const insideProfile =
+        profileRef.current?.contains(target) || profilePanelRef.current?.contains(target);
+      const insideNotes =
+        notifRef.current?.contains(target) || notifPanelRef.current?.contains(target);
+      if (!insideProfile) setShowProfileMenu(false);
+      if (!insideNotes) setShowNotifications(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  // Fetch market indices
-  useEffect(() => {
-    fetchMarketData();
-    const interval = setInterval(fetchMarketData, 20000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Fetch notifications
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    fetchNotes();
-    const interval = setInterval(fetchNotes, 15000);
-    return () => clearInterval(interval);
   }, []);
 
   const fetchNotes = async () => {
@@ -124,6 +151,22 @@ export default function TopNavbar({ onOpenMobileMenu }) {
       console.error(err);
     }
   };
+
+  // Fetch market indices
+  useEffect(() => {
+    fetchMarketData();
+    const interval = setInterval(fetchMarketData, 20000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch notifications
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetchNotes();
+    const interval = setInterval(fetchNotes, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleMarkAllRead = async () => {
     try {
@@ -189,26 +232,10 @@ export default function TopNavbar({ onOpenMobileMenu }) {
       count: activeAlertsCount,
       isActive: location.pathname === "/alerts",
     },
-    {
-      label: "Movers",
-      path: "/dashboard#market-movers",
-      icon: TrendingUp,
-      action: () => {
-        if (location.pathname === "/dashboard") {
-          document.getElementById("market-movers")?.scrollIntoView({ behavior: "smooth" });
-        } else {
-          navigate("/dashboard");
-          setTimeout(() => {
-            document.getElementById("market-movers")?.scrollIntoView({ behavior: "smooth" });
-          }, 200);
-        }
-      },
-      isActive: false,
-    },
   ];
 
   return (
-    <header className="no-print sticky top-0 z-50 h-16 w-full border-b border-white/[0.08] bg-[#080b11]/95 backdrop-blur-xl shrink-0 px-3 sm:px-6">
+    <header className="no-print sticky top-0 z-[80] h-16 w-full overflow-visible border-b border-white/[0.08] bg-[#080b11] shrink-0 px-3 sm:px-6">
       <div className="h-full max-w-7xl mx-auto flex items-center justify-between gap-3">
         {/* ── Zone 1: Logo & Nav Links (Never Compressed) ── */}
         <div className="flex items-center gap-3 lg:gap-4 shrink-0">
@@ -248,7 +275,12 @@ export default function TopNavbar({ onOpenMobileMenu }) {
               return (
                 <button
                   key={item.label}
-                  onClick={() => (item.action ? item.action() : navigate(item.path))}
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    setShowNotifications(false);
+                    if (item.action) item.action();
+                    else navigate(item.path);
+                  }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all select-none whitespace-nowrap shrink-0 ${
                     item.isActive
                       ? "bg-white/10 text-white shadow-xs border border-white/10"
@@ -382,14 +414,12 @@ export default function TopNavbar({ onOpenMobileMenu }) {
               )}
             </button>
 
-            <AnimatePresence>
-              {showNotifications && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-12 w-80 sm:w-96 bg-[#0e1422] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 z-50 overflow-hidden backdrop-blur-xl"
+            {showNotifications && (
+                <FloatingMenu
+                  open={showNotifications}
+                  anchorRef={notifRef}
+                  panelRef={notifPanelRef}
+                  width={384}
                 >
                   <div className="px-4 py-3 border-b border-white/[0.08] flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -455,9 +485,8 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                       Manage Price Alerts →
                     </Link>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </FloatingMenu>
+            )}
           </div>
 
           {/* User Profile Avatar & Menu */}
@@ -475,14 +504,12 @@ export default function TopNavbar({ onOpenMobileMenu }) {
               <ChevronDown size={13} className="text-gray-400 hidden sm:block" />
             </button>
 
-            <AnimatePresence>
-              {showProfileMenu && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-12 w-64 bg-[#0e1422] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 z-50 overflow-hidden backdrop-blur-xl"
+            {showProfileMenu && (
+                <FloatingMenu
+                  open={showProfileMenu}
+                  anchorRef={profileRef}
+                  panelRef={profilePanelRef}
+                  width={288}
                 >
                   <div className="p-4 border-b border-white/[0.08]">
                     <div className="flex items-center gap-3">
@@ -555,9 +582,8 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                       <span>Sign Out</span>
                     </button>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </FloatingMenu>
+            )}
           </div>
         </div>
       </div>

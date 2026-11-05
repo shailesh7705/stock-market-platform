@@ -156,38 +156,19 @@ function Login({ isModal = false, onSwitchToSignup }) {
           </button>
         </div>
 
-        {/* 1-Click Fast Accounts */}
         <div className="pt-2 border-t border-white/[0.08]">
-          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider text-center mb-2.5">
-            Quick 1-Click Access
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("shaileshkumaar4455@gmail.com", "shailesh123")}
-              className="px-2.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-left transition-all group"
-            >
-              <span className="block text-[11px] font-bold text-white group-hover:text-emerald-400 transition-colors truncate">
-                Shailesh Kumaar
-              </span>
-              <span className="block text-[9px] text-gray-400 truncate">
-                shaileshkumaar4455...
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("demo@stockpulse.com", "demo1234")}
-              className="px-2.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-left transition-all group"
-            >
-              <span className="block text-[11px] font-bold text-white group-hover:text-cyan-400 transition-colors truncate">
-                Demo Investor
-              </span>
-              <span className="block text-[9px] text-gray-400 truncate">
-                demo@stockpulse.com
-              </span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => handleQuickLogin("demo@stockpulse.com", "demo1234")}
+            className="w-full px-3 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-left transition-all group"
+          >
+            <span className="block text-[11px] font-bold text-white group-hover:text-cyan-400 transition-colors">
+              Continue as Demo Investor
+            </span>
+            <span className="block text-[10px] text-gray-400 mt-0.5">
+              demo@stockpulse.com
+            </span>
+          </button>
         </div>
 
         {/* Switch Link */}
@@ -216,8 +197,8 @@ function Login({ isModal = false, onSwitchToSignup }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#080d1a] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md bg-[#0e1626] border border-white/10 rounded-3xl p-8 shadow-2xl shadow-black/80">
+    <div className="min-h-screen bg-[#080d1a] overflow-y-auto px-4 py-10">
+      <div className="w-full max-w-md mx-auto bg-[#0e1626] border border-white/10 rounded-3xl p-8 shadow-2xl shadow-black/80">
         {formContent}
       </div>
     </div>

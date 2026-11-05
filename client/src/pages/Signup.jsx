@@ -1,6 +1,6 @@
 // client/src/pages/Signup.jsx
 import { useState } from "react";
-import { Eye, EyeOff, Zap, Activity, Lock, Mail, User, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Activity, Lock, Mail, User, ArrowRight } from "lucide-react";
 import { registerUser, loginUser } from "../services/authService";
 import { useNavigate, Link } from "react-router-dom";
 import useAuthStore from "../store/authStore";
@@ -10,6 +10,7 @@ function Signup({ isModal = false, onSwitchToLogin }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -17,8 +18,13 @@ function Signup({ isModal = false, onSwitchToLogin }) {
 
   async function handleSignup(e) {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !password) {
-      toast.error("Please fill in all fields");
+    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
+      toast.error("Please fill in your name, email, and password");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -69,7 +75,7 @@ function Signup({ isModal = false, onSwitchToLogin }) {
           </Link>
           <h1 className="text-2xl font-bold text-white tracking-tight">Create Free Account</h1>
           <p className="text-xs text-gray-400 mt-1">
-            Track NSE stocks and configure automated email price alerts
+            Add your name, email, and a password. Alerts are sent to this email.
           </p>
         </div>
       )}
@@ -85,10 +91,11 @@ function Signup({ isModal = false, onSwitchToLogin }) {
             <input
               type="text"
               required
-              placeholder="Shailesh Kumaar"
+              autoComplete="name"
+              placeholder="Your full name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-11 bg-[#080d1a] border border-white/10 rounded-xl pl-10 pr-4 text-xs text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder:text-gray-600 font-medium"
+              className="w-full h-11 bg-[#080d1a] border border-white/10 rounded-xl pl-10 pr-4 text-sm text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder:text-gray-500 font-medium"
             />
           </div>
         </div>
@@ -103,10 +110,11 @@ function Signup({ isModal = false, onSwitchToLogin }) {
             <input
               type="email"
               required
+              autoComplete="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full h-11 bg-[#080d1a] border border-white/10 rounded-xl pl-10 pr-4 text-xs text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder:text-gray-600 font-medium"
+              className="w-full h-11 bg-[#080d1a] border border-white/10 rounded-xl pl-10 pr-4 text-sm text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder:text-gray-500 font-medium"
             />
           </div>
         </div>
@@ -121,10 +129,11 @@ function Signup({ isModal = false, onSwitchToLogin }) {
             <input
               type={showPassword ? "text" : "password"}
               required
-              placeholder="••••••••"
+              autoComplete="new-password"
+              placeholder="Create a password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-11 bg-[#080d1a] border border-white/10 rounded-xl pl-10 pr-10 text-xs text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder:text-gray-600 font-medium"
+              className="w-full h-11 bg-[#080d1a] border border-white/10 rounded-xl pl-10 pr-10 text-sm text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder:text-gray-500 font-medium"
             />
             <button
               type="button"
@@ -133,6 +142,24 @@ function Signup({ isModal = false, onSwitchToLogin }) {
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+            Confirm Password
+          </label>
+          <div className="relative">
+            <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              autoComplete="new-password"
+              placeholder="Re-enter your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full h-11 bg-[#080d1a] border border-white/10 rounded-xl pl-10 pr-4 text-sm text-white outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all placeholder:text-gray-500 font-medium"
+            />
           </div>
         </div>
 
@@ -185,8 +212,8 @@ function Signup({ isModal = false, onSwitchToLogin }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#080d1a] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md bg-[#0e1626] border border-white/10 rounded-3xl p-8 shadow-2xl shadow-black/80">
+    <div className="min-h-screen bg-[#080d1a] overflow-y-auto px-4 py-10">
+      <div className="w-full max-w-md mx-auto bg-[#0e1626] border border-white/10 rounded-3xl p-8 shadow-2xl shadow-black/80">
         {formContent}
       </div>
     </div>
