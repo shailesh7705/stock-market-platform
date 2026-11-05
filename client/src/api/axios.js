@@ -41,15 +41,20 @@ API.interceptors.request.use((req) => {
   return req;
 });
 
-// Graceful 401 handling (auto clear expired token)
+// Graceful 401 handling (auto clear expired token & redirect to login)
 API.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
-      const isAuthEndpoint = error.config?.url?.includes("/auth/");
+      const url = error.config?.url || "";
+      const isAuthEndpoint = url.includes("/auth/login") || url.includes("/auth/register");
       if (!isAuthEndpoint) {
-        // If an authorized call fails with 401, token expired
-        console.warn("[Auth] Token expired or invalid session.");
+        console.warn("[Auth] Session expired or unauthorized. Clearing stored token.");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+          window.location.href = "/login?expired=1";
+        }
       }
     }
     return Promise.reject(error);
