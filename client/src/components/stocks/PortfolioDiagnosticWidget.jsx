@@ -166,6 +166,31 @@ export default function PortfolioDiagnosticWidget({ watchlist = [] }) {
       }
     });
 
+    // 5. Portfolio Compounding Growth Trajectory (1Y · 3Y · 5Y)
+    let sum1Y = 0, count1Y = 0;
+    let sum3YCAGR = 0, count3Y = 0;
+    let sum5YCAGR = 0, count5Y = 0;
+    stockDetailsList.forEach((s) => {
+      const f = s.forecast;
+      if (f?.oneYear?.expectedReturnPct !== undefined) {
+        sum1Y += f.oneYear.expectedReturnPct;
+        count1Y++;
+      }
+      if (f?.threeYear?.cagrPct !== undefined) {
+        sum3YCAGR += f.threeYear.cagrPct;
+        count3Y++;
+      }
+      if (f?.fiveYear?.cagrPct !== undefined) {
+        sum5YCAGR += f.fiveYear.cagrPct;
+        count5Y++;
+      }
+    });
+
+    const portfolio1YReturn = count1Y > 0 ? Number((sum1Y / count1Y).toFixed(1)) : null;
+    const portfolio3YCAGR = count3Y > 0 ? Number((sum3YCAGR / count3Y).toFixed(1)) : null;
+    const portfolio5YCAGR = count5Y > 0 ? Number((sum5YCAGR / count5Y).toFixed(1)) : null;
+    const portfolio5YMultiplier = portfolio5YCAGR ? `${Math.pow(1 + portfolio5YCAGR / 100, 5).toFixed(2)}x` : null;
+
     return {
       avgScore,
       grade,
@@ -177,6 +202,10 @@ export default function PortfolioDiagnosticWidget({ watchlist = [] }) {
       betaBadge,
       redFlags,
       totalEquities,
+      portfolio1YReturn,
+      portfolio3YCAGR,
+      portfolio5YCAGR,
+      portfolio5YMultiplier,
     };
   }, [stockDetailsList]);
 
@@ -363,6 +392,49 @@ export default function PortfolioDiagnosticWidget({ watchlist = [] }) {
           </div>
         </div>
       </div>
+
+      {/* Portfolio Multi-Year Growth Trajectory Ribbon (1Y · 3Y · 5Y) */}
+      {diagnostic.portfolio1YReturn !== null && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-cyan-950/30 to-[#0c1424] border border-cyan-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+              <TrendingUp size={18} />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white tracking-wide flex items-center gap-1.5">
+                Aggregate Portfolio Compounding Forecast
+                <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.2 rounded-full border border-cyan-500/20">
+                  1Y · 3Y · 5Y
+                </span>
+              </h4>
+              <p className="text-[11px] text-gray-400">
+                Synthesis of analyst price targets and Coffee Can quality reinvestment across your tracked equities.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 text-center shrink-0">
+            <div className="bg-black/30 px-3 py-1.5 rounded-xl border border-white/[0.04]">
+              <span className="text-[10px] text-gray-400 uppercase font-semibold block">1Y Expected</span>
+              <span className="text-xs font-extrabold text-blue-400 font-mono mt-0.5 block">
+                {diagnostic.portfolio1YReturn >= 0 ? "+" : ""}{diagnostic.portfolio1YReturn}%
+              </span>
+            </div>
+            <div className="bg-black/30 px-3 py-1.5 rounded-xl border border-white/[0.04]">
+              <span className="text-[10px] text-gray-400 uppercase font-semibold block">3Y CAGR</span>
+              <span className="text-xs font-extrabold text-teal-400 font-mono mt-0.5 block">
+                {diagnostic.portfolio3YCAGR}% p.a.
+              </span>
+            </div>
+            <div className="bg-black/30 px-3 py-1.5 rounded-xl border border-white/[0.04]">
+              <span className="text-[10px] text-gray-400 uppercase font-semibold block">5Y Capital</span>
+              <span className="text-xs font-extrabold text-emerald-400 font-mono mt-0.5 block">
+                {diagnostic.portfolio5YMultiplier}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sector Concentration Bar */}
       <div className="space-y-2.5 pt-2 border-t border-white/[0.06]">

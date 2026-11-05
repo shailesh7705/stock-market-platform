@@ -23,6 +23,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { calculatePulseScore } from "../../utils/pulseScore";
+import StockForecastCard from "./StockForecastCard";
 
 function formatIndianNumber(val) {
   if (val === null || val === undefined || isNaN(val)) return "—";
@@ -350,6 +351,9 @@ export default function StockDossier({ details, livePrice }) {
           </div>
         </div>
       </Card>
+
+      {/* ── Multi-Year Price & Return Forecast (1Y · 3Y · 5Y) ── */}
+      <StockForecastCard details={details} livePrice={currentPrice} />
 
       {/* ── 2x2 Intelligence Cards Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

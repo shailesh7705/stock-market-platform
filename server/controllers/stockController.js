@@ -8,6 +8,7 @@ const {
   getSectorMedianPE,
   calculatePulseScore,
 } = require("../utils/pulseScore");
+const { calculateForecast } = require("../utils/forecastEngine");
 
 const YF_OPTS = { validateResult: false };
 
@@ -588,6 +589,9 @@ async function fetchSingleStockDetails(rawSymbol) {
   // Calculate PulseScore
   const pulseScore = calculatePulseScore(summary, livePrice);
 
+  // Calculate 1Y, 3Y, 5Y Forecast based on PulseScore & Analyst Ratings
+  const forecast = calculateForecast(summary, livePrice, pulseScore);
+
   const payload = {
     symbol,
     ticker: symbol.replace(".NS", "").replace(".BO", ""),
@@ -653,6 +657,7 @@ async function fetchSingleStockDetails(rawSymbol) {
       sectorMedianTable: SECTOR_MEDIAN_PE,
     },
     pulseScore,
+    forecast,
     lastUpdated: new Date().toISOString(),
   };
 
