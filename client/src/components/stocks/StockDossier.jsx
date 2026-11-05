@@ -244,17 +244,19 @@ export default function StockDossier({ details, livePrice }) {
             <div className="space-y-2 text-center sm:text-left">
               <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                Live Price-Coupled Engine
+                Long-Term Compounder Model
               </div>
               <h3 className="text-lg font-bold text-white tracking-tight">
-                {scoreVal >= 85 ? "Exceptional Institutional Setup" :
-                 scoreVal >= 70 ? "Strong Investment Quality" :
-                 scoreVal >= 55 ? "Moderate Fundamental Profile" :
-                 scoreVal >= 40 ? "Caution: Sub-Optimal Solvency" :
-                 "High Fundamental Risk Detected"}
+                {pulseScore?.gradeLabel || (
+                  scoreVal >= 85 ? "Elite Long-Term Compounder (Coffee Can Grade)" :
+                  scoreVal >= 70 ? "Strong Fundamental Hold" :
+                  scoreVal >= 55 ? "Moderate Fundamental Profile" :
+                  scoreVal >= 40 ? "Caution: Sub-Optimal Solvency" :
+                  "High Fundamental Risk Detected"
+                )}
               </h3>
               <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
-                Aggregated institutional grading across 4 core quantitative pillars calibrated for Indian equity markets.
+                Coffee Can long-term fundamental scorecard: 30% Moat & ROE, 30% Solvency, 25% Valuation, 15% Sponsorship.
               </p>
             </div>
           </div>
@@ -262,84 +264,84 @@ export default function StockDossier({ details, livePrice }) {
           {/* 4 Pillars Progress Bars */}
           <div className="lg:col-span-7 space-y-4">
             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
-              <span>Pillar Scorecard (25 pts Each)</span>
+              <span>Pillar Scorecard (100-Point Fundamental Model)</span>
               <span className="text-white font-mono">{scoreVal} / 100 Total</span>
             </h4>
 
             {pulseScore?.pillars && (
               <div className="space-y-3">
-                {/* Pillar 1 */}
-                <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-bold text-white flex items-center gap-1.5">
-                      <Target size={14} className="text-blue-400" />
-                      1. Valuation & Margin of Safety
-                    </span>
-                    <span className="font-mono font-bold text-blue-400">
-                      {pulseScore.pillars.pillar1_valuation.score} / 25
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-700"
-                      style={{ width: `${pulseScore.pillars.pillar1_valuation.percentage}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Pillar 2 */}
+                {/* Pillar 1: Moat & Capital Efficiency (30 pts) */}
                 <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <Activity size={14} className="text-emerald-400" />
-                      2. Capital Efficiency & Moat (ROE/Margins)
+                      1. Business Moat & Capital Efficiency (ROE / Margins)
                     </span>
                     <span className="font-mono font-bold text-emerald-400">
-                      {pulseScore.pillars.pillar2_profitability.score} / 25
+                      {(pulseScore.pillars.pillar1_moat || pulseScore.pillars.pillar2_profitability)?.score ?? 0} / 30
                     </span>
                   </div>
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-emerald-500 rounded-full transition-all duration-700"
-                      style={{ width: `${pulseScore.pillars.pillar2_profitability.percentage}%` }}
+                      style={{ width: `${(pulseScore.pillars.pillar1_moat || pulseScore.pillars.pillar2_profitability)?.percentage ?? 0}%` }}
                     />
                   </div>
                 </div>
 
-                {/* Pillar 3 */}
+                {/* Pillar 2: Balance Sheet & Solvency (30 pts) */}
                 <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <ShieldCheck size={14} className="text-amber-400" />
-                      3. Balance Sheet Solvency & Insider Alignment
+                      2. Fortress Balance Sheet & Solvency (Low Debt / Promoters)
                     </span>
                     <span className="font-mono font-bold text-amber-400">
-                      {pulseScore.pillars.pillar3_solvency.score} / 25
+                      {(pulseScore.pillars.pillar2_solvency || pulseScore.pillars.pillar3_solvency)?.score ?? 0} / 30
                     </span>
                   </div>
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-amber-500 rounded-full transition-all duration-700"
-                      style={{ width: `${pulseScore.pillars.pillar3_solvency.percentage}%` }}
+                      style={{ width: `${(pulseScore.pillars.pillar2_solvency || pulseScore.pillars.pillar3_solvency)?.percentage ?? 0}%` }}
                     />
                   </div>
                 </div>
 
-                {/* Pillar 4 */}
+                {/* Pillar 3: Long-Term Entry Valuation (25 pts) */}
+                <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="font-bold text-white flex items-center gap-1.5">
+                      <Target size={14} className="text-blue-400" />
+                      3. Long-Term Value for Money (Sector-Relative P/E & Target Upside)
+                    </span>
+                    <span className="font-mono font-bold text-blue-400">
+                      {(pulseScore.pillars.pillar3_valuation || pulseScore.pillars.pillar1_valuation)?.score ?? 0} / 25
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full transition-all duration-700"
+                      style={{ width: `${(pulseScore.pillars.pillar3_valuation || pulseScore.pillars.pillar1_valuation)?.percentage ?? 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Pillar 4: Institutional Sponsorship & Dividend Shield (15 pts) */}
                 <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <Users size={14} className="text-purple-400" />
-                      4. Institutional Sponsorship & Volatility
+                      4. Institutional Sponsorship & Dividend Shield (FII/DII, Yield, Low Beta)
                     </span>
                     <span className="font-mono font-bold text-purple-400">
-                      {pulseScore.pillars.pillar4_institutional.score} / 25
+                      {(pulseScore.pillars.pillar4_sponsorship || pulseScore.pillars.pillar4_institutional)?.score ?? 0} / 15
                     </span>
                   </div>
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-purple-500 rounded-full transition-all duration-700"
-                      style={{ width: `${pulseScore.pillars.pillar4_institutional.percentage}%` }}
+                      style={{ width: `${(pulseScore.pillars.pillar4_sponsorship || pulseScore.pillars.pillar4_institutional)?.percentage ?? 0}%` }}
                     />
                   </div>
                 </div>
