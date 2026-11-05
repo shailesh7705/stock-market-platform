@@ -11,9 +11,10 @@ import {
   Bookmark,
   BookmarkCheck,
   ChevronLeft,
+  Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { getLiveStocks } from "../services/stockService";
+import { getLiveStocks, getStockDetails } from "../services/stockService";
 import {
   addToWatchlist,
   removeFromWatchlist,
@@ -22,6 +23,8 @@ import {
 import StockDetailsChart from "../components/charts/StockDetailsChart";
 import StockInsights from "../components/stocks/StockInsights";
 import CompanyProsCons from "../components/stocks/CompanyProsCons";
+import StockDossier from "../components/stocks/StockDossier";
+import RecentlyViewedCarousel, { saveRecentlyViewedStock } from "../components/stocks/RecentlyViewedCarousel";
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
 import useWatchlistStore from "../store/watchlistStore";
 import toast from "react-hot-toast";
@@ -33,6 +36,7 @@ function cleanSymbol(sym = "") {
 function StockDetailsPage() {
   const { symbol } = useParams();
   const [stock, setStock] = useState(null);
+  const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [inWatchlist, setInWatchlist] = useState(false);
@@ -45,18 +49,78 @@ function StockDetailsPage() {
   const displaySymbol = cleanSymbol(symbol);
 
   useEffect(() => {
-    fetchStock();
+    fetchStockData();
     checkWatchlist();
+
+    // Poll live price every 15s
+    const interval = setInterval(async () => {
+      try {
+        const live = await getLiveStocks([nsSymbol]);
+        if (Array.isArray(live) && live.length > 0) {
+          setStock((prev) => ({ ...prev, ...live[0] }));
+        }
+      } catch (err) {
+        // silent polling catch
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, [symbol]);
 
-  const fetchStock = async () => {
+  const fetchStockData = async () => {
+    setLoading(true);
     try {
-      const data = await getLiveStocks([nsSymbol]);
-      if (Array.isArray(data) && data.length > 0) {
-        setStock(data[0]);
+      // 1. Fetch deep institutional stock intelligence
+      const detailsData = await getStockDetails(nsSymbol);
+      if (detailsData) {
+        setDetails(detailsData);
+        setStock({
+          symbol: detailsData.symbol,
+          name: detailsData.name,
+          shortName: detailsData.shortName,
+          longName: detailsData.longName,
+          price: detailsData.price,
+          change: detailsData.change,
+          changeAmount: detailsData.changeAmount,
+          positive: detailsData.positive,
+          volume: detailsData.volume,
+          high: detailsData.dayHigh,
+          low: detailsData.dayLow,
+          fiftyTwoWeekHigh: detailsData.fiftyTwoWeekHigh,
+          fiftyTwoWeekLow: detailsData.fiftyTwoWeekLow,
+          trailingPE: detailsData.defaultKeyStatistics?.trailingPE,
+          dividendYield: null,
+          currency: detailsData.currency,
+          exchange: detailsData.exchange,
+        });
+
+        // Save to recently viewed stocks
+        saveRecentlyViewedStock({
+          symbol: nsSymbol,
+          name: detailsData.name,
+          price: detailsData.price,
+          change: detailsData.change,
+          positive: detailsData.positive,
+          pulseScore: detailsData.pulseScore,
+        });
+      } else {
+        // Fallback to live stock if details fails
+        const data = await getLiveStocks([nsSymbol]);
+        if (Array.isArray(data) && data.length > 0) {
+          setStock(data[0]);
+        }
       }
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching stock details:", error);
+      // Fallback
+      try {
+        const data = await getLiveStocks([nsSymbol]);
+        if (Array.isArray(data) && data.length > 0) {
+          setStock(data[0]);
+        }
+      } catch (e) {
+        console.error("Live stock fallback error:", e);
+      }
     } finally {
       setLoading(false);
     }
@@ -124,6 +188,7 @@ function StockDetailsPage() {
 
   const isPositive = stock?.positive;
   const changePercent = stock?.change ? stock.change.toFixed(2) : "0.00";
+  const pulseScore = details?.pulseScore;
 
   return (
     <AppLayout>
@@ -143,7 +208,10 @@ function StockDetailsPage() {
           </div>
         </div>
 
-        {/* Stock Hero Header with Company Logo */}
+        {/* Persistent Recently Viewed Stocks Carousel */}
+        <RecentlyViewedCarousel currentSymbol={displaySymbol} />
+
+        {/* Stock Hero Header with Company Logo & PulseScore Badge */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -177,6 +245,14 @@ function StockDetailsPage() {
                   {isPositive ? "+" : ""}
                   {changePercent}% Today
                 </div>
+
+                {/* PulseScore Header Badge */}
+                {pulseScore && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-blue-500/15 text-blue-400 border border-blue-500/30 font-mono">
+                    <Zap size={13} className="text-blue-400" />
+                    PulseScore {pulseScore.score} · Grade {pulseScore.grade}
+                  </div>
+                )}
               </div>
 
               <p className="text-sm text-gray-400 mt-1">
@@ -185,7 +261,7 @@ function StockDetailsPage() {
 
               <div className="flex items-baseline gap-3 mt-3">
                 <span className="text-4xl font-extrabold text-white font-mono tabular-nums tracking-tight">
-                  ₹{stock?.price ? stock.price.toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                  ₹{stock?.price ? Number(stock.price).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                 </span>
                 <span className="text-xs text-gray-500 font-medium">Real-time Indian Rupee</span>
               </div>
@@ -226,7 +302,7 @@ function StockDetailsPage() {
           </div>
         </motion.div>
 
-        {/* Main Grid: Advanced Chart & Insights */}
+        {/* Main Grid: Advanced Chart & Quick Insights */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Left Chart Card */}
           <div className="xl:col-span-8 space-y-6">
@@ -268,6 +344,11 @@ function StockDetailsPage() {
             <StockInsights stock={stock} />
           </div>
         </div>
+
+        {/* ── Deep Stock Intelligence Dossier (PulseScore & Institutional Matrix) ── */}
+        {details && (
+          <StockDossier details={details} livePrice={stock?.price} />
+        )}
 
         {/* ── Pros & Cons (Investment Checklist) ── */}
         <div className="w-full">

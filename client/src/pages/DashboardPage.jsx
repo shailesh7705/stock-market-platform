@@ -8,7 +8,11 @@ import WatchlistWidget from "../components/watchlist/WatchlistWidget";
 import MarketMovers from "../components/dashboard/MarketMovers";
 import AlertsPanel from "../components/alerts/AlertsPanel";
 import MarketNews from "../components/news/MarketNews";
+import RecentlyViewedCarousel from "../components/stocks/RecentlyViewedCarousel";
+import PortfolioDiagnosticWidget from "../components/stocks/PortfolioDiagnosticWidget";
 import useAuthStore from "../store/authStore";
+import useWatchlistStore from "../store/watchlistStore";
+import { getWatchlist } from "../services/watchlistService";
 
 function cleanName(name = "") {
   return name.replace(/\.\s*[A-Z]$/, "").trim();
@@ -34,6 +38,23 @@ function DashboardPage() {
   const { user } = useAuthStore();
   const displayName = cleanName(user?.name || "Investor");
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const { watchlist, setWatchlist } = useWatchlistStore();
+
+  useEffect(() => {
+    const fetchWl = async () => {
+      try {
+        const data = await getWatchlist();
+        if (Array.isArray(data)) {
+          setWatchlist(data);
+        }
+      } catch (err) {
+        // silent catch
+      }
+    };
+    if (!watchlist?.length) {
+      fetchWl();
+    }
+  }, []);
 
   useEffect(() => {
     const container = document.getElementById("dashboard-container");
@@ -57,7 +78,7 @@ function DashboardPage() {
               {getGreeting()}, <span className="text-emerald-400">{displayName}</span> 👋
             </h1>
             <p className="text-xs text-gray-400 mt-1">
-              {getDateString()} &nbsp;·&nbsp; Realtime NSE market intelligence and active price alerts.
+              {getDateString()} &nbsp;·&nbsp; Realtime NSE market intelligence, institutional PulseScores, and active price alerts.
             </p>
           </div>
 
@@ -66,6 +87,12 @@ function DashboardPage() {
             <span>NSE Alert Monitoring Online</span>
           </div>
         </div>
+
+        {/* Persistent "Recently Viewed Stocks" Carousel */}
+        <RecentlyViewedCarousel />
+
+        {/* Portfolio Health Diagnostic Widget */}
+        <PortfolioDiagnosticWidget watchlist={watchlist} />
 
         {/* Dashboard Grid */}
         <DashboardGrid>

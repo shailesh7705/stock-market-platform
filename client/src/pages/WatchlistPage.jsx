@@ -15,14 +15,17 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Sparkles,
+  Zap,
 } from "lucide-react";
 import { Sparklines, SparklinesLine } from "react-sparklines";
 import { motion, AnimatePresence } from "framer-motion";
 import { getWatchlist, removeFromWatchlist, addToWatchlist } from "../services/watchlistService";
-import { getLiveStocks, searchStocks } from "../services/stockService";
+import { getLiveStocks, searchStocks, getBatchStockDetails } from "../services/stockService";
 import useWatchlistStore from "../store/watchlistStore";
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
 import CompanyLogo from "../components/ui/CompanyLogo";
+import PortfolioDiagnosticWidget from "../components/stocks/PortfolioDiagnosticWidget";
+import RecentlyViewedCarousel from "../components/stocks/RecentlyViewedCarousel";
 import toast from "react-hot-toast";
 
 function cleanSymbol(sym = "") {
@@ -64,22 +67,38 @@ function WatchlistPage() {
 
   const fetchLivePrices = async () => {
     try {
-      const symbols = watchlist.map((s) => s.symbol);
-      const liveData = await getLiveStocks(symbols);
+      const symbols = watchlist.map((s) => s.symbol).filter(Boolean);
+      if (!symbols.length) return;
+
+      const [liveData, batchDetails] = await Promise.allSettled([
+        getLiveStocks(symbols),
+        getBatchStockDetails(symbols),
+      ]);
+
+      const liveList = liveData.status === "fulfilled" && Array.isArray(liveData.value) ? liveData.value : [];
+      const detailsList = batchDetails.status === "fulfilled" && Array.isArray(batchDetails.value) ? batchDetails.value : [];
+
+      const detailsMap = {};
+      detailsList.forEach((d) => {
+        if (d?.symbol) detailsMap[d.symbol] = d;
+      });
+
       const updated = watchlist.map((stock) => {
-        const live = liveData.find((item) => item.symbol === stock.symbol);
-        if (!live) return stock;
+        const live = liveList.find((item) => item.symbol === stock.symbol);
+        const det = detailsMap[stock.symbol];
         return {
           ...stock,
-          price: `₹${live.price?.toFixed(2)}`,
-          numericPrice: live.price,
-          change: `${live.change >= 0 ? "+" : ""}${live.change?.toFixed(2)}%`,
-          changePercent: live.change,
-          positive: live.positive,
-          dayHigh: live.high,
-          dayLow: live.low,
-          fiftyTwoWeekHigh: live.fiftyTwoWeekHigh,
-          fiftyTwoWeekLow: live.fiftyTwoWeekLow,
+          price: live?.price ? `₹${live.price.toFixed(2)}` : stock.price,
+          numericPrice: live?.price ?? stock.numericPrice,
+          change: live?.change !== undefined ? `${live.change >= 0 ? "+" : ""}${live.change.toFixed(2)}%` : stock.change,
+          changePercent: live?.change ?? stock.changePercent,
+          positive: live?.positive ?? stock.positive,
+          dayHigh: live?.high ?? stock.dayHigh,
+          dayLow: live?.low ?? stock.dayLow,
+          fiftyTwoWeekHigh: live?.fiftyTwoWeekHigh ?? stock.fiftyTwoWeekHigh,
+          fiftyTwoWeekLow: live?.fiftyTwoWeekLow ?? stock.fiftyTwoWeekLow,
+          pulseScore: det?.pulseScore || stock.pulseScore,
+          sector: det?.assetProfile?.sector || stock.sector,
         };
       });
       setWatchlist(updated);
@@ -168,7 +187,7 @@ function WatchlistPage() {
               </span>
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              Real-time NSE tracking with 1-click price target alerts
+              Real-time NSE tracking with 1-click price target alerts & institutional portfolio diagnostics
             </p>
           </div>
 
@@ -207,6 +226,9 @@ function WatchlistPage() {
             )}
           </div>
         </div>
+
+        {/* Persistent Recently Viewed Stocks Carousel */}
+        <RecentlyViewedCarousel />
 
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -247,6 +269,9 @@ function WatchlistPage() {
           </Card>
         </div>
 
+        {/* Portfolio Health Diagnostic Widget */}
+        <PortfolioDiagnosticWidget watchlist={watchlist} />
+
         {/* Watchlist Table */}
         <Card className="p-0 overflow-hidden border border-white/[0.08]">
           <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
@@ -273,7 +298,7 @@ function WatchlistPage() {
               <Bookmark size={28} className="text-gray-600 mx-auto mb-3" />
               <p className="text-sm font-bold text-white mb-1">Your watchlist is empty</p>
               <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
-                Use the search box above to track any Indian NSE stock and monitor real-time prices.
+                Use the search box above to track any Indian NSE stock and monitor real-time prices and PulseScores.
               </p>
             </div>
           ) : (
@@ -286,17 +311,22 @@ function WatchlistPage() {
                     onClick={() => navigate(`/stock/${sym}`)}
                     className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors cursor-pointer group"
                   >
-                    {/* Left: Symbol & Name with Logo */}
-                    <div className="flex items-center gap-3.5 min-w-0 md:w-1/3">
+                    {/* Left: Symbol & Name with Logo & PulseScore */}
+                    <div className="flex items-center gap-3.5 min-w-0 md:w-2/5">
                       <CompanyLogo symbol={sym} companyName={stock.name} size={40} />
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">
                             {sym}
                           </span>
                           <span className="text-[10px] font-semibold text-gray-500 bg-white/5 px-1.5 py-0.2 rounded">
                             NSE
                           </span>
+                          {stock.pulseScore && (
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono inline-flex items-center gap-1">
+                              <Zap size={10} /> {stock.pulseScore.score} · {stock.pulseScore.grade}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-gray-400 truncate mt-0.5">{stock.name}</p>
                       </div>

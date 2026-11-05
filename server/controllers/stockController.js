@@ -3,6 +3,11 @@ const path = require("path");
 const fs = require("fs");
 const YahooFinance = require("yahoo-finance2").default;
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
+const {
+  SECTOR_MEDIAN_PE,
+  getSectorMedianPE,
+  calculatePulseScore,
+} = require("../utils/pulseScore");
 
 const YF_OPTS = { validateResult: false };
 
@@ -507,10 +512,204 @@ const searchStocks = async (req, res) => {
   }
 };
 
+// ─── Core Helper: Fetch & Calculate Stock Details + PulseScore ───────────────
+async function fetchSingleStockDetails(rawSymbol) {
+  if (!rawSymbol) return null;
+  let symbol = rawSymbol.trim().toUpperCase();
+  if (!symbol.includes(".")) symbol = `${symbol}.NS`;
+
+  const cacheKey = `details_${symbol}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
+  const [summaryResult, quoteResult] = await Promise.allSettled([
+    Promise.race([
+      yahooFinance.quoteSummary(
+        symbol,
+        {
+          modules: [
+            "summaryDetail",
+            "financialData",
+            "defaultKeyStatistics",
+            "assetProfile",
+            "majorHoldersBreakdown",
+            "recommendationTrend",
+          ],
+        },
+        YF_OPTS
+      ),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000)),
+    ]),
+    safeQuote(symbol, 6000),
+  ]);
+
+  const summary = summaryResult.status === "fulfilled" ? (summaryResult.value || {}) : {};
+  const quote = quoteResult.status === "fulfilled" ? quoteResult.value : null;
+
+  const assetProfile = summary.assetProfile || {};
+  const financialData = summary.financialData || {};
+  const defaultKeyStats = summary.defaultKeyStatistics || {};
+  const summaryDetail = summary.summaryDetail || {};
+  const majorHoldersBreakdown = summary.majorHoldersBreakdown || {};
+  const trend = Array.isArray(summary.recommendationTrend?.trend)
+    ? summary.recommendationTrend.trend[0]
+    : (summary.recommendationTrend || {});
+
+  const livePrice = quote?.regularMarketPrice || financialData?.currentPrice || summaryDetail?.regularMarketPrice || 0;
+
+  // Major Holders Breakdown
+  const rawInsiders = majorHoldersBreakdown.insidersPercentHeld ?? null;
+  const rawInstitutions = majorHoldersBreakdown.institutionsPercentHeld ?? null;
+  const insidersPct = rawInsiders !== null ? Number((rawInsiders <= 1.0 ? rawInsiders * 100 : rawInsiders).toFixed(2)) : null;
+  const institutionsPct = rawInstitutions !== null ? Number((rawInstitutions <= 1.0 ? rawInstitutions * 100 : rawInstitutions).toFixed(2)) : null;
+  let retailFloatPct = null;
+  if (insidersPct !== null && institutionsPct !== null) {
+    retailFloatPct = Number(Math.max(0, Math.min(100, 100 - (insidersPct + institutionsPct))).toFixed(2));
+  }
+
+  // Recommendation Trend counts
+  const recommendationTrend = {
+    strongBuy: Number(trend.strongBuy || 0),
+    buy: Number(trend.buy || 0),
+    hold: Number(trend.hold || 0),
+    sell: Number(trend.sell || 0),
+    strongSell: Number(trend.strongSell || 0),
+  };
+
+  // Sector relative valuation
+  const sector = assetProfile.sector || "Default";
+  const sectorMedianPE = getSectorMedianPE(sector);
+  const stockPE = defaultKeyStats.trailingPE || summaryDetail.trailingPE || quote?.trailingPE || null;
+  const sectorRelativePE = stockPE && sectorMedianPE ? Number((stockPE / sectorMedianPE).toFixed(2)) : null;
+  const discountPremiumPct = stockPE && sectorMedianPE
+    ? Number((((stockPE - sectorMedianPE) / sectorMedianPE) * 100).toFixed(2))
+    : null;
+
+  // Calculate PulseScore
+  const pulseScore = calculatePulseScore(summary, livePrice);
+
+  const payload = {
+    symbol,
+    ticker: symbol.replace(".NS", "").replace(".BO", ""),
+    name: quote?.longName || quote?.shortName || symbol.replace(".NS", ""),
+    shortName: quote?.shortName || symbol.replace(".NS", ""),
+    longName: quote?.longName || quote?.shortName || symbol.replace(".NS", ""),
+    price: livePrice,
+    change: quote?.regularMarketChangePercent ?? 0,
+    changeAmount: quote?.regularMarketChange ?? 0,
+    positive: (quote?.regularMarketChangePercent ?? 0) >= 0,
+    volume: quote?.regularMarketVolume || 0,
+    marketCap: quote?.marketCap || null,
+    marketCapFormatted: formatIndianMarketCap(quote?.marketCap),
+    dayHigh: quote?.regularMarketDayHigh || null,
+    dayLow: quote?.regularMarketDayLow || null,
+    fiftyTwoWeekHigh: quote?.fiftyTwoWeekHigh || null,
+    fiftyTwoWeekLow: quote?.fiftyTwoWeekLow || null,
+    fiftyTwoWeekChangePercent: quote?.fiftyTwoWeekChangePercent || null,
+    currency: quote?.currency || "INR",
+    exchange: quote?.fullExchangeName || "NSE",
+    assetProfile: {
+      sector: assetProfile.sector || "N/A",
+      industry: assetProfile.industry || "N/A",
+      longBusinessSummary: assetProfile.longBusinessSummary || "",
+      fullTimeEmployees: assetProfile.fullTimeEmployees || null,
+      website: assetProfile.website || null,
+      city: assetProfile.city || null,
+      country: assetProfile.country || "India",
+    },
+    financialData: {
+      targetMeanPrice: financialData.targetMeanPrice || null,
+      targetHighPrice: financialData.targetHighPrice || null,
+      targetLowPrice: financialData.targetLowPrice || null,
+      recommendationKey: financialData.recommendationKey || "none",
+      debtToEquity: financialData.debtToEquity ?? null,
+      returnOnEquity: financialData.returnOnEquity ?? null,
+      operatingMargins: financialData.operatingMargins ?? null,
+      profitMargins: financialData.profitMargins ?? null,
+      totalRevenue: financialData.totalRevenue ?? null,
+      totalDebt: financialData.totalDebt ?? null,
+    },
+    defaultKeyStatistics: {
+      beta: defaultKeyStats.beta ?? null,
+      forwardPE: defaultKeyStats.forwardPE ?? null,
+      trailingPE: stockPE ? Number(stockPE.toFixed(2)) : null,
+      priceToBook: defaultKeyStats.priceToBook ?? null,
+      bookValue: defaultKeyStats.bookValue ?? null,
+      pegRatio: defaultKeyStats.pegRatio ?? null,
+      sharesOutstanding: defaultKeyStats.sharesOutstanding ?? null,
+    },
+    majorHolders: {
+      insidersPercentHeld: insidersPct,
+      institutionsPercentHeld: institutionsPct,
+      retailFloatPercent: retailFloatPct,
+    },
+    recommendationTrend,
+    valuation: {
+      stockPE: stockPE ? Number(stockPE.toFixed(2)) : null,
+      sectorMedianPE,
+      sectorRelativePE,
+      discountPremiumPct,
+      pegRatio: defaultKeyStats.pegRatio ? Number(defaultKeyStats.pegRatio.toFixed(2)) : null,
+      sectorMedianTable: SECTOR_MEDIAN_PE,
+    },
+    pulseScore,
+    lastUpdated: new Date().toISOString(),
+  };
+
+  setCache(cacheKey, payload, 60 * 1000);
+  return payload;
+}
+
+// ─── GET /api/stocks/details/:symbol ─────────────────────────────────────────
+const getStockDetails = async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    if (!symbol) return res.status(400).json({ message: "Symbol is required" });
+
+    const details = await fetchSingleStockDetails(symbol);
+    if (!details) {
+      return res.status(404).json({ message: `Could not retrieve details for ${symbol}` });
+    }
+
+    return res.json(details);
+  } catch (error) {
+    console.error("[StockDetails] Error:", error.message);
+    return res.status(500).json({ message: "Failed to fetch stock details", error: error.message });
+  }
+};
+
+// ─── GET /api/stocks/details/batch?symbols=... ────────────────────────────────
+const getBatchStockDetails = async (req, res) => {
+  try {
+    const { symbols } = req.query;
+    if (!symbols) return res.status(400).json({ message: "Symbols required" });
+
+    const symbolList = symbols
+      .split(",")
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+
+    const results = await Promise.allSettled(
+      symbolList.map((sym) => fetchSingleStockDetails(sym))
+    );
+
+    const data = results
+      .filter((r) => r.status === "fulfilled" && r.value)
+      .map((r) => r.value);
+
+    return res.json(data);
+  } catch (error) {
+    console.error("[BatchStockDetails] Error:", error.message);
+    return res.status(500).json({ message: "Failed to fetch batch stock details", error: error.message });
+  }
+};
+
 module.exports = {
   getLiveStocks,
   getHistoricalData,
   searchStocks,
   getMarketIndices,
   getMarketMovers,
+  getStockDetails,
+  getBatchStockDetails,
 };
