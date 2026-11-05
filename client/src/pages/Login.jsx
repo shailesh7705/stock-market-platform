@@ -60,10 +60,10 @@ function Login({ isModal = false, onSwitchToSignup }) {
       {!isModal && (
         <div className="text-center mb-6">
           <Link to="/" className="inline-flex items-center gap-2 mb-4 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black shadow-lg shadow-emerald-500/25">
-              <Zap size={18} className="fill-current" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 flex items-center justify-center text-black shadow-lg shadow-amber-500/25">
+              <Zap size={18} className="fill-current text-black" />
             </div>
-            <span className="text-xl font-extrabold text-white tracking-tight">StockPulse</span>
+            <span className="text-xl font-extrabold text-white tracking-tight group-hover:text-amber-400 transition-colors">StockPulse</span>
           </Link>
           <h1 className="text-2xl font-bold text-white tracking-tight">Welcome Back</h1>
           <p className="text-xs text-gray-400 mt-1">

@@ -208,21 +208,21 @@ export default function TopNavbar({ onOpenMobileMenu }) {
             <Menu size={18} />
           </button>
 
-          {/* Brand Logo */}
+          {/* Brand Logo with Premium Gold Emblem */}
           <Link
             to="/dashboard"
             className="flex items-center gap-2.5 group shrink-0 select-none"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-400 via-teal-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:shadow-emerald-500/40 transition-all">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 p-0.5 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:shadow-amber-500/40 group-hover:scale-105 transition-all">
               <div className="w-full h-full bg-[#080b11] rounded-[10px] flex items-center justify-center">
-                <Activity size={18} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                <Activity size={18} className="text-amber-400 group-hover:scale-110 transition-transform" />
               </div>
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-black text-white tracking-tight group-hover:text-emerald-400 transition-colors">
+              <span className="text-lg font-black text-white tracking-tight group-hover:text-amber-400 transition-colors">
                 StockPulse
               </span>
-              <span className="hidden sm:inline-block text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <span className="hidden sm:inline-block text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono tracking-wider">
                 PRO
               </span>
             </div>
@@ -261,8 +261,8 @@ export default function TopNavbar({ onOpenMobileMenu }) {
           </nav>
         </div>
 
-        {/* ── Zone 2: Unbreakable Command Palette Search Trigger ── */}
-        <div className="flex-1 max-w-[200px] sm:max-w-xs md:max-w-sm lg:max-w-md mx-1 sm:mx-3">
+        {/* ── Zone 2: Command Palette Search Trigger (Non-Intrusive, Balanced Width) ── */}
+        <div className="flex-1 max-w-[150px] sm:max-w-[220px] md:max-w-xs lg:max-w-sm mx-1 sm:mx-3 shrink">
           <StockSearch />
         </div>
 

@@ -333,6 +333,11 @@ export default function TradingViewChart({
         borderColor: "rgba(255, 255, 255, 0.08)",
         timeVisible: timeframe === "1d" || timeframe === "5d",
         secondsVisible: false,
+        fixLeftEdge: true,
+        fixRightEdge: true,
+        lockVisibleTimeRangeOnResize: true,
+        rightOffset: 2,
+        minBarSpacing: 3,
       },
       rightPriceScale: {
         borderColor: "rgba(255, 255, 255, 0.08)",
@@ -482,6 +487,10 @@ export default function TradingViewChart({
         timeScale: {
           visible: !showMACD, // show time axis on bottom-most chart
           borderColor: "rgba(255, 255, 255, 0.08)",
+          fixLeftEdge: true,
+          fixRightEdge: true,
+          lockVisibleTimeRangeOnResize: true,
+          rightOffset: 2,
         },
         rightPriceScale: {
           borderColor: "rgba(255, 255, 255, 0.08)",
@@ -545,6 +554,10 @@ export default function TradingViewChart({
         timeScale: {
           visible: true,
           borderColor: "rgba(255, 255, 255, 0.08)",
+          fixLeftEdge: true,
+          fixRightEdge: true,
+          lockVisibleTimeRangeOnResize: true,
+          rightOffset: 2,
         },
         rightPriceScale: {
           borderColor: "rgba(255, 255, 255, 0.08)",

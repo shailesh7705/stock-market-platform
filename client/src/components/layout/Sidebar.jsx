@@ -106,16 +106,16 @@ function Sidebar({ onCloseMobile }) {
             }}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 p-0.5 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-105 transition-transform">
               <div className="w-full h-full bg-[#090e17] rounded-[10px] flex items-center justify-center">
-                <Activity size={18} className="text-emerald-400" />
+                <Activity size={18} className="text-amber-400" />
               </div>
             </div>
             <div>
               <span className="text-[17px] font-black text-white tracking-tight leading-none block">
                 StockPulse
               </span>
-              <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase mt-0.5 block">
+              <span className="text-[10px] font-bold text-amber-400 tracking-wider uppercase mt-0.5 block">
                 NSE Intelligent Terminal
               </span>
             </div>

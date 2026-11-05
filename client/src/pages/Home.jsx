@@ -40,15 +40,15 @@ function Home() {
         <div className="max-w-7xl mx-auto h-full px-6 lg:px-10 flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black shadow-lg shadow-emerald-500/25 group-hover:scale-105 transition-transform">
-              <Zap size={20} className="fill-current" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 via-yellow-400 to-amber-600 flex items-center justify-center text-black shadow-lg shadow-amber-500/25 group-hover:scale-105 transition-transform">
+              <Zap size={20} className="fill-current text-black" />
             </div>
             <div>
-              <span className="text-xl font-extrabold text-white tracking-tight leading-none block">
+              <span className="text-xl font-extrabold text-white tracking-tight leading-none block group-hover:text-amber-400 transition-colors">
                 StockPulse
               </span>
-              <span className="text-[10px] font-semibold text-emerald-400 tracking-wider uppercase block mt-0.5">
-                NSE Alert Platform
+              <span className="text-[10px] font-semibold text-amber-400 tracking-wider uppercase block mt-0.5">
+                NSE Terminal & Intelligence
               </span>
             </div>
           </Link>

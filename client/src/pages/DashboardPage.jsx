@@ -99,14 +99,14 @@ function DashboardPage() {
           {/* 4 Overview Metrics */}
           <PortfolioOverview />
 
-          {/* Market Movers */}
-          <MarketMovers />
-
           {/* Active Alerts Panel */}
           <AlertsPanel />
 
           {/* Watchlist Widget */}
           <WatchlistWidget />
+
+          {/* Market Movers */}
+          <MarketMovers />
 
           {/* Market Intelligence News */}
           <MarketNews />
