@@ -24,7 +24,7 @@ function AuthModal({
 
         backdrop-blur-sm
 
-        flex items-center justify-center
+        mobile-sheet flex items-center justify-center
 
         px-4
 
@@ -36,7 +36,7 @@ function AuthModal({
 
           relative
 
-          w-full max-w-md
+          mobile-sheet-panel w-full max-w-md
 
           bg-[#0f172a]
 

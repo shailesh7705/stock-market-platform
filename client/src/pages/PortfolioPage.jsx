@@ -458,9 +458,9 @@ export default function PortfolioPage() {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <div className="mobile-sheet fixed inset-0 z-[70] flex items-center justify-center p-4">
           <button type="button" className="absolute inset-0 bg-black/70" aria-label="Close" onClick={() => setModalOpen(false)} />
-          <form onSubmit={submitHolding} className="relative w-full max-w-lg bg-[#0e1422] border border-white/10 rounded-3xl p-5 shadow-2xl">
+          <form onSubmit={submitHolding} className="mobile-sheet-panel relative w-full max-w-lg max-h-[92vh] overflow-y-auto bg-[#0e1422] border border-white/10 rounded-3xl p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-extrabold text-white">{editing ? "Edit Holding" : "Add Stock Holding"}</h2>
               <button type="button" onClick={() => setModalOpen(false)} className="w-8 h-8 rounded-lg bg-white/5 text-gray-300">

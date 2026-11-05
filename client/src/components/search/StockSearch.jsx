@@ -156,7 +156,7 @@ export default function StockSearch({ inline = false, placeholder = "Search 2,36
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="w-full h-9.5 px-3 rounded-xl bg-[#0f1422] hover:bg-[#131b2e] border border-white/[0.08] hover:border-white/20 flex items-center justify-between gap-2.5 transition-all text-gray-400 hover:text-gray-200 group select-none shadow-xs"
+        className="w-full h-11 px-3 rounded-xl bg-[#0f1422] hover:bg-[#131b2e] border border-white/[0.08] hover:border-white/20 flex items-center justify-between gap-2.5 transition-all text-gray-400 hover:text-gray-200 group select-none shadow-xs"
         title="Search stocks (Ctrl + K)"
       >
         <div className="flex items-center gap-2 min-w-0">
@@ -176,7 +176,7 @@ export default function StockSearch({ inline = false, placeholder = "Search 2,36
       {/* ── Luxury Command Palette Modal Overlay (Raycast / Linear Style) ── */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-start justify-center pt-14 sm:pt-20 px-4">
+          <div className="mobile-sheet fixed inset-0 z-[100] flex items-end sm:items-start justify-center sm:pt-20 px-0 sm:px-4">
             {/* Backdrop with Blur */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -192,7 +192,7 @@ export default function StockSearch({ inline = false, placeholder = "Search 2,36
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
-              className="relative w-full max-w-2xl bg-[#0e1422] border border-white/15 rounded-3xl shadow-2xl shadow-black/90 overflow-hidden divide-y divide-white/[0.08] z-10"
+              className="mobile-sheet-panel relative w-full max-w-2xl bg-[#0e1422] border border-white/15 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black/90 overflow-hidden divide-y divide-white/[0.08] z-10"
             >
               {/* Input Header */}
               <div className="relative flex items-center px-4 py-3.5 bg-[#0a0e17]">

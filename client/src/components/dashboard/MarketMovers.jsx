@@ -404,7 +404,7 @@ export default function MarketMovers() {
                   <div
                     key={stock.symbol}
                     onClick={() => navigate(`/stock/${sym}`)}
-                    className="p-3.5 rounded-2xl bg-[#080d1a] border border-white/5 active:scale-[0.99] transition-all cursor-pointer"
+                    className="min-h-11 p-3.5 rounded-2xl bg-[#080d1a] border border-white/5 active:scale-[0.99] transition-all cursor-pointer touch-manipulation"
                   >
                     <div className="flex items-center justify-between gap-3 mb-2.5">
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -452,6 +452,16 @@ export default function MarketMovers() {
                         height={18}
                       />
                     </div>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigate(`/stock/${sym}`);
+                      }}
+                      className="mt-3 h-11 w-full rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white"
+                    >
+                      Open {sym}
+                    </button>
                   </div>
                 );
               })}

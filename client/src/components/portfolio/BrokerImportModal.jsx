@@ -68,9 +68,9 @@ export default function BrokerImportModal({ open, onClose, onImported }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+    <div className="mobile-sheet fixed inset-0 z-[70] flex items-center justify-center p-4">
       <button type="button" className="absolute inset-0 bg-black/70" aria-label="Close import" onClick={onClose} />
-      <div className="relative w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col bg-[#0e1422] border border-white/10 rounded-3xl shadow-2xl">
+      <div className="mobile-sheet-panel relative w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col bg-[#0e1422] border border-white/10 rounded-3xl shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div>
             <h2 className="text-lg font-extrabold text-white">Import broker holdings</h2>

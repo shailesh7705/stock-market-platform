@@ -67,7 +67,7 @@ export default function PeerComparisonMatrix({ symbol }) {
       ) : peers.length < 2 ? (
         <p className="text-sm text-gray-400">Not enough published peers for this symbol yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="touch-scroll">
           <table className="w-full min-w-[640px] text-left text-xs">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-gray-500">

@@ -92,7 +92,7 @@ function CreateAlertModal({ open, onClose, stock, onAlertCreated }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[100] px-4 py-6 overflow-y-auto"
+          className="mobile-sheet fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[100] px-4 py-6 overflow-y-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
@@ -102,7 +102,7 @@ function CreateAlertModal({ open, onClose, stock, onAlertCreated }) {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 16 }}
             transition={{ duration: 0.2 }}
-            className="w-full max-w-md bg-[#0e1626] border border-white/10 rounded-3xl shadow-2xl shadow-black/70 overflow-hidden my-auto"
+            className="mobile-sheet-panel w-full max-w-md bg-[#0e1626] border border-white/10 rounded-3xl shadow-2xl shadow-black/70 overflow-hidden my-auto"
           >
             {/* Top accent bar */}
             <div className="h-[3px] bg-gradient-to-r from-emerald-500 via-teal-400 to-blue-500" />

@@ -298,7 +298,7 @@ export default function TradingViewChart({
     }
 
     const width = containerRef.current.clientWidth || 800;
-    const height = 420;
+    const height = window.innerWidth < 640 ? 300 : 420;
 
     // ─── 1. Main Chart Setup ──────────────────────────────────────────────────
     const chart = createChart(containerRef.current, {
@@ -345,6 +345,17 @@ export default function TradingViewChart({
           top: 0.08,
           bottom: showVolume ? 0.22 : 0.08,
         },
+      },
+      handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: false,
+      },
+      handleScale: {
+        mouseWheel: true,
+        pinch: true,
+        axisPressedMouseMove: true,
       },
     });
     chartRef.current = chart;
@@ -723,14 +734,14 @@ export default function TradingViewChart({
       </div>
 
       {/* ── Toolbar: Chart Types, Timeframe Pills & Indicators ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-[#0a101f] border-b border-white/[0.06]">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 px-3 sm:px-5 py-3 bg-[#0a101f] border-b border-white/[0.06]">
         {/* Timeframe Selectors */}
-        <div className="flex items-center gap-1 bg-[#0e1626] border border-white/10 p-1 rounded-xl">
+        <div className="flex items-center gap-1 overflow-x-auto max-w-full bg-[#0e1626] border border-white/10 p-1 rounded-xl">
           {TIMEFRAMES.map(({ label, value }) => (
             <button
               key={value}
               onClick={() => setTimeframe(value)}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+              className={`min-h-11 min-w-11 px-3 rounded-lg text-xs font-bold shrink-0 transition-all ${
                 timeframe === value
                   ? "bg-emerald-500 text-black shadow-md shadow-emerald-500/20"
                   : "text-gray-400 hover:text-white"

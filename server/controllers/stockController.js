@@ -13,6 +13,7 @@ const { SCREENER_UNIVERSE, findPeerGroup } = require("../data/peerGroups");
 const { toPercent, debtToEquityRatio, sma, rsi, cagr, mapPool } = require("../utils/marketMath");
 
 const YF_OPTS = { validateResult: false };
+const { getCache, setCache } = require("../utils/memoryCache");
 
 // ─── Load Local NSE Stocks for Instant Search ─────────────────────────────────
 let localStocks = [];
@@ -23,23 +24,6 @@ try {
   }
 } catch (err) {
   console.warn("[StockController] Could not load stocks.json:", err.message);
-}
-
-// ─── Simple In-Memory Cache ───────────────────────────────────────────────────
-const cache = {};
-
-function getCache(key) {
-  const entry = cache[key];
-  if (!entry) return null;
-  if (Date.now() - entry.time > entry.ttl) {
-    delete cache[key];
-    return null;
-  }
-  return entry.data;
-}
-
-function setCache(key, data, ttl) {
-  cache[key] = { data, time: Date.now(), ttl };
 }
 
 // ─── Dividend Yield Normalizer ────────────────────────────────────────────────
@@ -172,13 +156,13 @@ const getMarketIndices = async (req, res) => {
     }
 
     // Return stale cache if available, else fallback
-    const stale = cache["indices"]?.data;
+    const stale = getCache("indices");
     if (stale && stale.length > 0) return res.json(stale);
 
     return res.json(FALLBACK_INDICES);
   } catch (error) {
     console.error("[Indices] Error:", error.message);
-    const stale = cache["indices"]?.data;
+    const stale = getCache("indices");
     if (stale) return res.json(stale);
     return res.json(FALLBACK_INDICES);
   }
@@ -307,7 +291,7 @@ const getMarketMovers = async (req, res) => {
     return res.json(payload);
   } catch (error) {
     console.error("[Movers] Error:", error.message);
-    const stale = cache["movers_categorized"]?.data;
+    const stale = getCache("movers_categorized");
     if (stale) return res.json(stale);
     res.status(500).json({ message: "Failed to fetch movers" });
   }
@@ -436,7 +420,7 @@ const getHistoricalData = async (req, res) => {
       });
     }
 
-    setCache(cacheKey, chartData, 3 * 60 * 1000);
+    setCache(cacheKey, chartData, 30 * 60 * 1000);
     return res.json(chartData);
   } catch (error) {
     console.error("[History] Error:", error.message);
@@ -691,7 +675,7 @@ async function fetchSingleStockDetails(rawSymbol) {
     lastUpdated: new Date().toISOString(),
   };
 
-  setCache(cacheKey, payload, 60 * 1000);
+  setCache(cacheKey, payload, 12 * 60 * 1000);
   return payload;
 }
 

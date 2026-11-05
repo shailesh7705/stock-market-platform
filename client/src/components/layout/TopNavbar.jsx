@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import StockSearch from "../search/StockSearch";
+import MarketStatusPill from "../common/MarketStatusPill";
 import { getMarketIndices } from "../../services/marketService";
 import { getNotifications, markAllRead } from "../../services/notificationService";
 import useAlertStore from "../../store/alertStore";
@@ -44,7 +45,6 @@ function getInitials(name = "") {
 
 export default function TopNavbar({ onOpenMobileMenu }) {
   const [marketData, setMarketData] = useState([]);
-  const [marketOpen, setMarketOpen] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -111,15 +111,6 @@ export default function TopNavbar({ onOpenMobileMenu }) {
       if (Array.isArray(data) && data.length > 0) {
         setMarketData(data);
       }
-      const now = new Date();
-      // IST calculation (Mon-Fri 9:15 to 15:30 IST)
-      const istHours = (now.getUTCHours() + 5 + Math.floor((now.getUTCMinutes() + 30) / 60)) % 24;
-      const istMinutes = (now.getUTCMinutes() + 30) % 60;
-      const istDay = now.getUTCDay();
-      const totalMin = istHours * 60 + istMinutes;
-      const isWeekday = istDay >= 1 && istDay <= 5;
-      const isOpen = isWeekday && totalMin >= 9 * 60 + 15 && totalMin <= 15 * 60 + 30;
-      setMarketOpen(isOpen);
     } catch (err) {
       console.error(err);
     }
@@ -208,14 +199,14 @@ export default function TopNavbar({ onOpenMobileMenu }) {
   ];
 
   return (
-    <header className="no-print sticky top-0 z-50 h-16 w-full border-b border-white/[0.08] bg-[#080b11]/95 backdrop-blur-xl shrink-0 px-3 sm:px-6">
+    <header className="no-print sticky top-0 z-50 h-16 w-full overflow-hidden border-b border-white/[0.08] bg-[#080b11]/95 backdrop-blur-xl shrink-0 px-3 sm:px-6">
       <div className="h-full max-w-7xl mx-auto flex items-center justify-between gap-3">
         {/* ── Zone 1: Logo & Nav Links (Never Compressed) ── */}
         <div className="flex items-center gap-3 lg:gap-4 shrink-0">
           {/* Mobile hamburger button */}
           <button
             onClick={onOpenMobileMenu}
-            className="lg:hidden w-9 h-9 rounded-xl bg-[#0f1422] border border-white/10 flex items-center justify-center text-gray-300 hover:text-white shrink-0 transition-colors"
+            className="lg:hidden w-11 h-11 rounded-xl bg-[#0f1422] border border-white/10 flex items-center justify-center text-gray-300 hover:text-white shrink-0 transition-colors"
             title="Open menu"
           >
             <Menu size={18} />
@@ -281,6 +272,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
 
         {/* ── Zone 3: Market Status & User Controls ── */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <MarketStatusPill />
           {/* Live Market Indices Ticker (Desktop / Wide screens) */}
           <div className="hidden xl:flex items-center gap-2 pr-2 border-r border-white/[0.08]">
             {marketData.slice(0, 1).map((market) => (
@@ -330,18 +322,6 @@ export default function TopNavbar({ onOpenMobileMenu }) {
               </div>
             ))}
 
-            {/* Market Live Status Pill */}
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] font-bold shrink-0">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  marketOpen ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
-                }`}
-              />
-              <span className={marketOpen ? "text-emerald-400" : "text-gray-400"}>
-                {marketOpen ? "NSE Live" : "Closed"}
-              </span>
-            </div>
-
             {/* Live IST Clock on 2xl */}
             <div className="hidden 2xl:flex items-center gap-1 text-[11px] text-gray-400 font-mono shrink-0">
               <Clock size={11} className="text-gray-500" />
@@ -371,7 +351,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                 setShowNotifications(!showNotifications);
                 setShowProfileMenu(false);
               }}
-              className="relative w-9 h-9 rounded-xl bg-[#0e1422] border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 transition-all"
+              className="relative w-11 h-11 rounded-xl bg-[#0e1422] border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 transition-all"
               title="Notifications"
             >
               <Bell size={15} />

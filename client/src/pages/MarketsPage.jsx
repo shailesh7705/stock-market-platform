@@ -52,7 +52,7 @@ export default function MarketsPage() {
         ) : error ? (
           <p className="text-sm text-rose-300">{error}</p>
         ) : (
-          <div className="rounded-3xl border border-white/10 bg-[#0e1626] overflow-x-auto">
+          <div className="touch-scroll rounded-3xl border border-white/10 bg-[#0e1626]">
             <table className="w-full min-w-[760px] text-left text-xs">
               <thead className="text-[10px] uppercase tracking-wider text-gray-500">
                 <tr>

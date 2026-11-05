@@ -28,6 +28,7 @@
     padding: 0;
     background-color: #080b11;
     color: #f1f5f9;
+    overflow-x: hidden;
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     letter-spacing: -0.015em;
     -webkit-font-smoothing: antialiased;
@@ -96,6 +97,35 @@
   background: linear-gradient(180deg, rgba(17, 24, 39, 0.9) 0%, rgba(11, 16, 27, 0.95) 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+.touch-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+@media (max-width: 640px) {
+  .mobile-sheet {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .mobile-sheet-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92vh;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-top-left-radius: 1.5rem !important;
+    border-top-right-radius: 1.5rem !important;
+  }
+
+  .mobile-sheet-panel input,
+  .mobile-sheet-panel button,
+  .mobile-sheet-panel textarea {
+    min-height: 44px;
+  }
 }
 
 .print-only {
