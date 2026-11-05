@@ -1,11 +1,18 @@
 // client/src/api/axios.js
 import axios from "axios";
 
-const rawUrl =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV
-    ? "http://localhost:5000/api"
-    : "https://stock-market-platform-2j95.onrender.com/api");
+// If running in local dev or on localhost, connect to local backend (port 5000)
+// Otherwise in production deployment, connect to production Render backend
+const isLocal =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname.startsWith("192.168.") ||
+    window.location.hostname.startsWith("10."));
+
+const rawUrl = isLocal
+  ? (import.meta.env.VITE_DEV_API_URL || "http://localhost:5000/api")
+  : (import.meta.env.VITE_API_URL || "https://stock-market-platform-2j95.onrender.com/api");
 
 const baseURL = rawUrl.replace(/\/+$/, "");
 

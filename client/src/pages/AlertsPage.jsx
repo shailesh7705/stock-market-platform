@@ -123,15 +123,15 @@ function AlertsPage() {
   const handleSendTestEmail = async () => {
     try {
       setTestingEmail(true);
-      await sendTestAlert({
+      const res = await sendTestAlert({
         symbol: "RELIANCE.NS",
         targetPrice: 1300,
         condition: "above",
       });
-      toast.success(`Verification email sent to ${user?.email || "your email"}! Check your inbox.`);
+      toast.success(res?.message || `Verification email sent to ${user?.email || "your email"}! Check your inbox.`);
     } catch (err) {
       console.error(err);
-      toast.error("Could not send test email. Please check server logs.");
+      toast.error(err.response?.data?.message || "Could not send test email. Please check server logs.");
     } finally {
       setTestingEmail(false);
     }

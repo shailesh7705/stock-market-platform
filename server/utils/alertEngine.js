@@ -115,13 +115,24 @@ const checkAlerts = async () => {
           // 2. Send Rich HTML Email
           const user = await User.findById(alert.user);
           if (user && user.email) {
-            await sendEmail({
+            console.log(`[AlertEngine] Dispatching alert email to ${user.email} for ${symbol}...`);
+            sendEmail({
               to: user.email,
               symbol,
               targetPrice: target,
               currentPrice,
               condition,
-            });
+            }).then((res) => {
+              if (res && res.success) {
+                console.log(`[AlertEngine] ✓ Email dispatched successfully to ${user.email}`);
+              } else {
+                console.warn(`[AlertEngine] ✗ Email dispatch warning for ${user.email}:`, res?.error);
+              }
+            }).catch((err) =>
+              console.error(`[AlertEngine] Email delivery failed for ${user.email}:`, err.message)
+            );
+          } else {
+            console.warn(`[AlertEngine] User or email not found for alert ${alert._id}`);
           }
         }
       }

@@ -151,7 +151,7 @@ const sendTestAlert = async (req, res) => {
     const currentPrice = (await fetchCurrentPrice(symbol)) || targetPrice;
 
     // Send the test email
-    await sendEmail({
+    const emailResult = await sendEmail({
       to: user.email,
       symbol,
       targetPrice,
@@ -159,6 +159,13 @@ const sendTestAlert = async (req, res) => {
       condition,
       isTest: true,
     });
+
+    if (emailResult && emailResult.success === false) {
+      return res.status(500).json({
+        success: false,
+        message: `Could not deliver email: ${emailResult.error || "SMTP connection failed"}`,
+      });
+    }
 
     // Also add an in-app notification
     await Notification.create({
@@ -168,11 +175,13 @@ const sendTestAlert = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Test alert email sent to ${user.email}`,
+      message: `Test alert email delivered to ${user.email}`,
+      deliveredTo: user.email,
+      port: emailResult?.port,
     });
   } catch (error) {
     console.error("[Alert] Test email error:", error.message);
-    res.status(500).json({ message: "Failed to send test email" });
+    res.status(500).json({ message: error.message || "Failed to send test email" });
   }
 };
 

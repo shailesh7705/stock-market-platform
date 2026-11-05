@@ -193,30 +193,43 @@ const buildHtml = ({ symbol, targetPrice, currentPrice, condition = "above", isT
 };
 
 /**
+ * Create transport helper with IPv4 enforcement and strict timeouts.
+ * Force IPv4 (family: 4) is critical on Render / AWS to prevent IPv6 hanging.
+ */
+function createGmailTransport(port = 465, secure = true) {
+  const cleanPass = (process.env.EMAIL_PASS || "").replace(/\s+/g, "");
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port,
+    secure,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: cleanPass,
+    },
+    family: 4, // Prevent IPv6 hanging in Linux cloud containers (Render, AWS, DigitalOcean)
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 12000,
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+}
+
+/**
  * Unified sendEmail helper.
- * Supports:
- *   sendEmail({ to, symbol, targetPrice, currentPrice, condition, isTest })
- *   sendEmail(to, subject, text) [legacy fallback]
+ * Dual-port fallback: Tries port 465 (SSL) first, and falls back to port 587 (STARTTLS).
  */
 const sendEmail = async (param1, param2, param3) => {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       console.warn("[Email] EMAIL_USER or EMAIL_PASS not configured. Skipping email.");
-      return;
+      return { success: false, error: "EMAIL_USER or EMAIL_PASS not configured" };
     }
-
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
 
     let to, subject, html, text;
 
     if (typeof param1 === "object" && param1 !== null) {
-      // New object signature
       const opts = param1;
       to = opts.to;
       const clean = cleanSymbol(opts.symbol);
@@ -228,7 +241,6 @@ const sendEmail = async (param1, param2, param3) => {
         : `${clean} has reached your target price of ₹${formatPrice(opts.targetPrice)} (Current: ₹${formatPrice(opts.currentPrice)})`;
       html = buildHtml(opts);
     } else {
-      // Legacy signature: (to, subject, text)
       to = param1;
       subject = param2;
       text = param3;
@@ -241,17 +253,37 @@ const sendEmail = async (param1, param2, param3) => {
       });
     }
 
-    await transporter.sendMail({
+    if (!to || !to.includes("@")) {
+      console.warn("[Email] Invalid recipient email:", to);
+      return { success: false, error: "Invalid recipient email" };
+    }
+
+    const mailOptions = {
       from: `"StockPulse Alerts 📈" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,
       html,
-    });
+    };
 
-    console.log(`[Email] ✓ Alert email delivered to ${to}`);
+    // Attempt 1: Port 465 (SSL) with IPv4
+    try {
+      const transporter465 = createGmailTransport(465, true);
+      const info = await transporter465.sendMail(mailOptions);
+      console.log(`[Email] ✓ Delivered to ${to} via port 465 (ID: ${info.messageId})`);
+      return { success: true, messageId: info.messageId, port: 465 };
+    } catch (err465) {
+      console.warn(`[Email] Port 465 failed (${err465.message}), attempting fallback to port 587...`);
+      
+      // Attempt 2: Port 587 (STARTTLS) with IPv4
+      const transporter587 = createGmailTransport(587, false);
+      const info = await transporter587.sendMail(mailOptions);
+      console.log(`[Email] ✓ Delivered to ${to} via fallback port 587 (ID: ${info.messageId})`);
+      return { success: true, messageId: info.messageId, port: 587 };
+    }
   } catch (error) {
     console.error("[Email] ✗ Failed to send email:", error.message);
+    return { success: false, error: error.message };
   }
 };
 
