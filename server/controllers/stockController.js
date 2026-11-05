@@ -737,4 +737,5 @@ module.exports = {
   getMarketMovers,
   getStockDetails,
   getBatchStockDetails,
+  fetchSingleStockDetails,
 };

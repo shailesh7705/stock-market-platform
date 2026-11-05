@@ -194,7 +194,7 @@ function StockDetailsPage() {
     <AppLayout>
       <div className="max-w-7xl mx-auto space-y-6 pb-12">
         {/* Breadcrumb Back Link */}
-        <div className="flex items-center justify-between">
+        <div className="no-print flex items-center justify-between">
           <Link
             to="/dashboard"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white transition-colors"
@@ -209,13 +209,15 @@ function StockDetailsPage() {
         </div>
 
         {/* Persistent Recently Viewed Stocks Carousel */}
-        <RecentlyViewedCarousel currentSymbol={displaySymbol} />
+        <div className="no-print">
+          <RecentlyViewedCarousel currentSymbol={displaySymbol} />
+        </div>
 
         {/* Stock Hero Header with Company Logo & PulseScore Badge */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-5 bg-[#0e1626] border border-white/[0.08] p-6 rounded-3xl shadow-xl"
+          className="print-surface flex flex-col md:flex-row md:items-center justify-between gap-5 bg-[#0e1626] border border-white/[0.08] p-6 rounded-3xl shadow-xl"
         >
           {/* Left Title & Pricing with Logo */}
           <div className="flex items-start gap-4">
@@ -269,7 +271,7 @@ function StockDetailsPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="no-print flex items-center gap-3 shrink-0">
             {/* Watchlist Toggle */}
             <button
               onClick={handleWatchlistToggle}
@@ -303,7 +305,7 @@ function StockDetailsPage() {
         </motion.div>
 
         {/* Main Grid: Advanced Chart & Quick Insights */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="no-print grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Left Chart Card */}
           <div className="xl:col-span-8 space-y-6">
             <StockDetailsChart
@@ -351,7 +353,7 @@ function StockDetailsPage() {
         )}
 
         {/* ── Pros & Cons (Investment Checklist) ── */}
-        <div className="w-full">
+        <div className="no-print w-full">
           <CompanyProsCons stock={stock} />
         </div>
       </div>

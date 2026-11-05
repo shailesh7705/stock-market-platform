@@ -34,6 +34,12 @@ function Sidebar({ onCloseMobile }) {
       badge: null,
     },
     {
+      title: "Portfolio",
+      path: "/portfolio",
+      icon: Activity,
+      badge: null,
+    },
+    {
       title: "Watchlist",
       path: "/watchlist",
       icon: Bookmark,
@@ -95,7 +101,7 @@ function Sidebar({ onCloseMobile }) {
   };
 
   return (
-    <div className="w-72 shrink-0 h-full bg-[#0b1120] border-r border-white/[0.08] flex flex-col justify-between p-5 overflow-y-auto">
+    <div className="no-print w-72 shrink-0 h-full bg-[#0b1120] border-r border-white/[0.08] flex flex-col justify-between p-5 overflow-y-auto">
       <div>
         {/* Brand Logo & Close Button */}
         <div className="flex items-center justify-between mb-6">

@@ -22,8 +22,8 @@ function Signup({ isModal = false, onSwitchToLogin }) {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)) {
+      toast.error("Use 8+ characters with an uppercase letter, a lowercase letter, and a number");
       return;
     }
 
@@ -114,7 +114,7 @@ function Signup({ isModal = false, onSwitchToLogin }) {
         {/* Password */}
         <div>
           <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-            Password (Min 6 chars)
+            Password (8+ chars, upper, lower, number)
           </label>
           <div className="relative">
             <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />

@@ -163,6 +163,12 @@ export default function TopNavbar({ onOpenMobileMenu }) {
       isActive: location.pathname === "/dashboard",
     },
     {
+      label: "Portfolio",
+      path: "/portfolio",
+      icon: Activity,
+      isActive: location.pathname === "/portfolio",
+    },
+    {
       label: "Watchlist",
       path: "/watchlist",
       icon: Bookmark,
@@ -195,7 +201,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
   ];
 
   return (
-    <header className="sticky top-0 z-50 h-16 w-full border-b border-white/[0.08] bg-[#080b11]/95 backdrop-blur-xl shrink-0 px-3 sm:px-6">
+    <header className="no-print sticky top-0 z-50 h-16 w-full border-b border-white/[0.08] bg-[#080b11]/95 backdrop-blur-xl shrink-0 px-3 sm:px-6">
       <div className="h-full max-w-7xl mx-auto flex items-center justify-between gap-3">
         {/* ── Zone 1: Logo & Nav Links (Never Compressed) ── */}
         <div className="flex items-center gap-3 lg:gap-4 shrink-0">

@@ -7,6 +7,7 @@ import DashboardPage from "./pages/DashboardPage";
 import StockDetailsPage from "./pages/StockDetailsPage";
 import WatchlistPage from "./pages/WatchlistPage";
 import AlertsPage from "./pages/AlertsPage";
+import PortfolioPage from "./pages/PortfolioPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotificationListener from "./components/notifications/NotificationListener";
 
@@ -44,6 +45,15 @@ function App() {
           element={
             <ProtectedRoute>
               <WatchlistPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/portfolio"
+          element={
+            <ProtectedRoute>
+              <PortfolioPage />
             </ProtectedRoute>
           }
         />

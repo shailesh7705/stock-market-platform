@@ -97,3 +97,82 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 }
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  html,
+  body,
+  #root,
+  main {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  .no-print,
+  .scenario-selector {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-surface,
+  .print-surface div,
+  .print-surface section,
+  .print-surface article,
+  .print-surface table {
+    background: #ffffff !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    color: #111827 !important;
+  }
+
+  .print-surface h1,
+  .print-surface h2,
+  .print-surface h3,
+  .print-surface h4,
+  .print-surface p,
+  .print-surface span,
+  .print-surface td,
+  .print-surface th,
+  .print-surface div {
+    color: #111827 !important;
+  }
+
+  .print-surface .print-gold,
+  .print-surface .print-gold * {
+    color: #b45309 !important;
+  }
+
+  .print-surface .print-bar-fill {
+    background: #111827 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print-surface .print-keep {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-surface table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .print-surface th,
+  .print-surface td {
+    border: 1px solid #d1d5db !important;
+    padding: 6px 8px;
+    text-align: left;
+  }
+}

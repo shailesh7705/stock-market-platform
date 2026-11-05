@@ -21,9 +21,16 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  Share2,
+  Link2,
+  Printer,
+  X,
+  Send,
 } from "lucide-react";
 import { calculatePulseScore } from "../../utils/pulseScore";
+import { calculateForecast } from "../../utils/forecastEngine";
 import StockForecastCard from "./StockForecastCard";
+import toast from "react-hot-toast";
 
 function formatIndianNumber(val) {
   if (val === null || val === undefined || isNaN(val)) return "—";
@@ -84,6 +91,7 @@ function getGradeColor(grade) {
 
 export default function StockDossier({ details, livePrice }) {
   const [showFullSummary, setShowFullSummary] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Recalculate pulse score if live price moves or use server computed
   const pulseScore = useMemo(() => {
@@ -91,6 +99,12 @@ export default function StockDossier({ details, livePrice }) {
     const currentPrice = livePrice || details.price || 0;
     return calculatePulseScore(details, currentPrice);
   }, [details, livePrice]);
+
+  const shareForecast = useMemo(() => {
+    if (!details) return null;
+    const price = Number(livePrice || details.price || 0);
+    return calculateForecast(details, price, pulseScore);
+  }, [details, livePrice, pulseScore]);
 
   if (!details) return null;
 
@@ -173,10 +187,60 @@ export default function StockDossier({ details, livePrice }) {
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (scoreVal / 100) * circumference;
 
+  const shareSymbol = (details.ticker || details.symbol || "").replace(".NS", "").replace(".BO", "").toUpperCase();
+  const shareUrl = `https://stockpulse-mu-three.vercel.app/stock/${shareSymbol}`;
+  const target1Y =
+    financialData.targetMeanPrice ||
+    shareForecast?.oneYear?.scenarios?.base?.price ||
+    null;
+  const upsidePct =
+    targetUpside !== null
+      ? targetUpside
+      : shareForecast?.oneYear?.expectedReturnPct ?? null;
+  const targetLabel =
+    target1Y !== null
+      ? Number(target1Y).toLocaleString("en-IN", { maximumFractionDigits: 2 })
+      : "N/A";
+  const upsideLabel =
+    upsidePct !== null && upsidePct !== undefined
+      ? `${Number(upsidePct) >= 0 ? "" : ""}${Number(upsidePct)}`
+      : "N/A";
+  const shareText = `📊 StockPulse Research Dossier on ${shareSymbol}: 100-Point Fundamental PulseScore is ${scoreVal}/100 (${pulseScore?.gradeLabel || "Coffee Can"}). 1Y Analyst Target: ₹${targetLabel} (+${upsideLabel}%). Check full Coffee Can breakdown: ${shareUrl}`;
+
+  const copyShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Dossier link copied");
+    } catch {
+      toast.error("Could not copy the dossier link");
+    }
+  };
+
+  const openShare = (href) => {
+    window.open(href, "_blank", "noopener,noreferrer");
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="print-surface print-dossier space-y-6">
+      <div className="print-only print-keep mb-4">
+        <div className="flex items-center gap-3">
+          <div className="print-gold w-10 h-10 rounded-xl border border-amber-700 flex items-center justify-center font-black">
+            SP
+          </div>
+          <div>
+            <p className="print-gold text-xs font-bold uppercase tracking-widest">StockPulse Research Note</p>
+            <h1 className="text-2xl font-black">{shareSymbol}</h1>
+            <p className="text-sm">{details.longName || details.name || shareSymbol}</p>
+          </div>
+        </div>
+        <p className="mt-2 text-lg font-bold">
+          LTP ₹{currentPrice ? Number(currentPrice).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+          {" · "}PulseScore {scoreVal}/100 · Grade {pulseScore?.grade || "—"}
+        </p>
+      </div>
+
       {/* ── Section Title ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-400 flex items-center justify-center text-black font-extrabold shadow-md shadow-emerald-500/20">
             <Zap size={18} />
@@ -194,14 +258,101 @@ export default function StockDossier({ details, livePrice }) {
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-gray-400 bg-[#0e1626] border border-white/10 px-3 py-1.5 rounded-xl">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Coupled with NSE LTP</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className="no-print h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white flex items-center gap-1.5"
+          >
+            <Share2 size={14} className="text-amber-400" />
+            Share Dossier
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="no-print h-9 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-extrabold flex items-center gap-1.5"
+          >
+            <Printer size={14} />
+            Download PDF Note
+          </button>
+          <div className="no-print hidden sm:flex items-center gap-2 text-xs font-semibold text-gray-400 bg-[#0e1626] border border-white/10 px-3 py-1.5 rounded-xl">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Coupled with NSE LTP</span>
+          </div>
         </div>
       </div>
 
+      {shareOpen && (
+        <div className="no-print fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close share dialog"
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setShareOpen(false)}
+          />
+          <div className="relative w-full max-w-md bg-[#0e1422] border border-white/10 rounded-2xl p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <h3 className="text-base font-extrabold text-white">Share Dossier</h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  {shareSymbol} · PulseScore {scoreVal}/100
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShareOpen(false)}
+                className="w-8 h-8 rounded-lg bg-white/5 text-gray-300 flex items-center justify-center"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed bg-white/[0.03] border border-white/10 rounded-xl p-3 mb-4">
+              {shareText}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={copyShareLink}
+                className="h-10 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white flex items-center justify-center gap-1.5"
+              >
+                <Link2 size={14} /> Copy Link
+              </button>
+              <button
+                type="button"
+                onClick={() => openShare(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`)}
+                className="h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs font-bold text-emerald-300"
+              >
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openShare(
+                    `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`
+                  )
+                }
+                className="h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 text-xs font-bold text-sky-300 flex items-center justify-center gap-1.5"
+              >
+                <Send size={14} /> Telegram
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openShare(
+                    `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
+                  )
+                }
+                className="h-10 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white"
+              >
+                X / Twitter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── 1. PulseScore Header Badge & Radar Card ── */}
-      <Card className="bg-gradient-to-br from-[#0e1626] via-[#09101d] to-[#0b1424] border border-white/10 p-6 md:p-8 rounded-3xl relative overflow-hidden shadow-2xl">
+      <Card className="print-keep bg-gradient-to-br from-[#0e1626] via-[#09101d] to-[#0b1424] border border-white/10 p-6 md:p-8 rounded-3xl relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
@@ -284,7 +435,7 @@ export default function StockDossier({ details, livePrice }) {
                   </div>
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                      className="print-bar-fill h-full bg-emerald-500 rounded-full transition-all duration-700"
                       style={{ width: `${(pulseScore.pillars.pillar1_moat || pulseScore.pillars.pillar2_profitability)?.percentage ?? 0}%` }}
                     />
                   </div>
@@ -303,7 +454,7 @@ export default function StockDossier({ details, livePrice }) {
                   </div>
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-amber-500 rounded-full transition-all duration-700"
+                      className="print-bar-fill h-full bg-amber-500 rounded-full transition-all duration-700"
                       style={{ width: `${(pulseScore.pillars.pillar2_solvency || pulseScore.pillars.pillar3_solvency)?.percentage ?? 0}%` }}
                     />
                   </div>
@@ -322,7 +473,7 @@ export default function StockDossier({ details, livePrice }) {
                   </div>
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-700"
+                      className="print-bar-fill h-full bg-blue-500 rounded-full transition-all duration-700"
                       style={{ width: `${(pulseScore.pillars.pillar3_valuation || pulseScore.pillars.pillar1_valuation)?.percentage ?? 0}%` }}
                     />
                   </div>
@@ -341,7 +492,7 @@ export default function StockDossier({ details, livePrice }) {
                   </div>
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-purple-500 rounded-full transition-all duration-700"
+                      className="print-bar-fill h-full bg-purple-500 rounded-full transition-all duration-700"
                       style={{ width: `${(pulseScore.pillars.pillar4_sponsorship || pulseScore.pillars.pillar4_institutional)?.percentage ?? 0}%` }}
                     />
                   </div>
@@ -358,7 +509,7 @@ export default function StockDossier({ details, livePrice }) {
       {/* ── 2x2 Intelligence Cards Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* ── 2. Analyst Consensus & Target Price Forecast Card ── */}
-        <Card className="space-y-5 p-6 rounded-3xl bg-[#0e1626] border border-white/[0.08]">
+        <Card className="no-print space-y-5 p-6 rounded-3xl bg-[#0e1626] border border-white/[0.08]">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Target size={18} className="text-emerald-400" />
@@ -458,7 +609,7 @@ export default function StockDossier({ details, livePrice }) {
         </Card>
 
         {/* ── 3. Sector Valuation Benchmark Card ── */}
-        <Card className="space-y-5 p-6 rounded-3xl bg-[#0e1626] border border-white/[0.08]">
+        <Card className="no-print space-y-5 p-6 rounded-3xl bg-[#0e1626] border border-white/[0.08]">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <BarChart2 size={18} className="text-blue-400" />
@@ -542,7 +693,7 @@ export default function StockDossier({ details, livePrice }) {
         </Card>
 
         {/* ── 4. Institutional Ownership Card ── */}
-        <Card className="space-y-5 p-6 rounded-3xl bg-[#0e1626] border border-white/[0.08]">
+        <Card className="no-print space-y-5 p-6 rounded-3xl bg-[#0e1626] border border-white/[0.08]">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <PieChart size={18} className="text-purple-400" />
@@ -617,7 +768,7 @@ export default function StockDossier({ details, livePrice }) {
         </Card>
 
         {/* ── 5. Solvency & Capital Efficiency Matrix ── */}
-        <Card className="space-y-5 p-6 rounded-3xl bg-[#0e1626] border border-white/[0.08]">
+        <Card className="print-keep space-y-5 p-6 rounded-3xl bg-[#0e1626] border border-white/[0.08]">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <ShieldCheck size={18} className="text-amber-400" />
@@ -687,7 +838,7 @@ export default function StockDossier({ details, livePrice }) {
       </div>
 
       {/* ── 6. Company DNA & Moat Overview ── */}
-      <Card className="space-y-4 p-6 md:p-8 rounded-3xl bg-[#0e1626] border border-white/[0.08]">
+      <Card className="no-print space-y-4 p-6 md:p-8 rounded-3xl bg-[#0e1626] border border-white/[0.08]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">

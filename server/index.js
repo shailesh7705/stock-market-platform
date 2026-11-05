@@ -4,6 +4,8 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const mongoSanitize = require("express-mongo-sanitize");
 const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
@@ -12,10 +14,24 @@ const watchlistRoutes = require("./routes/watchlistRoutes");
 const alertRoutes = require("./routes/alertRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const newsRoutes = require("./routes/newsRoutes");
+const portfolioRoutes = require("./routes/portfolioRoutes");
+const { apiLimiter } = require("./middleware/rateLimiters");
 const startAlertEngine = require("./utils/alertEngine");
 const startKeepAlive = require("./utils/keepAlive");
 
 const app = express();
+
+app.set("trust proxy", 1);
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    frameguard: { action: "deny" },
+    noSniff: true,
+    xssFilter: true,
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  })
+);
 
 // ─── CORS Configuration ───────────────────────────────────────────────────────
 const allowedOrigins = [
@@ -60,6 +76,21 @@ app.use(
 
 app.use(express.json());
 
+// Express 5 exposes req.query as a getter. Shadow it so mongo-sanitize can
+// strip $ and . operators from body, query, and params.
+app.use((req, _res, next) => {
+  Object.defineProperty(req, "query", {
+    value: { ...req.query },
+    writable: true,
+    configurable: true,
+    enumerable: true,
+  });
+  next();
+});
+app.use(mongoSanitize());
+
+app.use("/api", apiLimiter);
+
 // Disable caching on all API responses
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
@@ -80,6 +111,7 @@ app.use("/api/watchlist", watchlistRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/news", newsRoutes);
+app.use("/api/portfolio", portfolioRoutes);
 
 // Health check & Diagnostic
 app.get(["/", "/api/health"], (req, res) => {
@@ -100,6 +132,11 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error("[Error]", err.message);
+  if (process.env.NODE_ENV === "production") {
+    return res.status(500).json({
+      message: "An unexpected error occurred. Please try again later.",
+    });
+  }
   res.status(500).json({ message: err.message || "Internal server error" });
 });
 

@@ -1,5 +1,6 @@
 const express = require("express");
 const protect = require("../middleware/authMiddleware");
+const { authLimiter } = require("../middleware/rateLimiters");
 
 const {
   registerUser,
@@ -8,9 +9,9 @@ const {
 
 const router = express.Router();
 
-router.post("/register", registerUser);
+router.post("/register", authLimiter, registerUser);
 
-router.post("/login", loginUser);
+router.post("/login", authLimiter, loginUser);
 router.get("/profile", protect, (req, res) => {
 
   res.json({

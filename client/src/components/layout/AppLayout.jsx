@@ -21,7 +21,7 @@ function AppLayout({ children }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="lg:hidden fixed inset-0 bg-black/75 backdrop-blur-xs z-50"
+              className="no-print lg:hidden fixed inset-0 bg-black/75 backdrop-blur-xs z-50"
             />
             <motion.div
               initial={{ x: -300 }}

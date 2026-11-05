@@ -75,10 +75,10 @@ export default function StockForecastCard({ details, livePrice }) {
 
   return (
     <Card className="p-6 md:p-8 rounded-3xl bg-gradient-to-br from-[#0c1322] via-[#09101d] to-[#0d1627] border border-white/10 shadow-2xl relative overflow-hidden space-y-6">
-      <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="no-print absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* ── Header ── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/[0.08] pb-6 relative z-10">
+      <div className="no-print flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/[0.08] pb-6 relative z-10">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-black font-extrabold shadow-md shadow-cyan-500/20">
@@ -97,7 +97,7 @@ export default function StockForecastCard({ details, livePrice }) {
         </div>
 
         {/* Scenario Toggle */}
-        <div className="flex items-center gap-2 bg-[#080d18] border border-white/10 p-1 rounded-2xl shrink-0">
+        <div className="scenario-selector no-print flex items-center gap-2 bg-[#080d18] border border-white/10 p-1 rounded-2xl shrink-0">
           <span className="text-[11px] font-semibold text-gray-500 px-2 hidden sm:inline">Scenario:</span>
           <button
             onClick={() => setSelectedScenario("bear")}
@@ -133,7 +133,7 @@ export default function StockForecastCard({ details, livePrice }) {
       </div>
 
       {/* ── Summary Indicator Strip ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-white/[0.02] border border-white/[0.06] p-3.5 rounded-2xl">
+      <div className="no-print grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-white/[0.02] border border-white/[0.06] p-3.5 rounded-2xl">
         <div>
           <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold block">
             Outlook Profile
@@ -168,8 +168,35 @@ export default function StockForecastCard({ details, livePrice }) {
         </div>
       </div>
 
+      <div className="print-only print-keep">
+        <h4 className="text-sm font-bold mb-2">1Y / 3Y / 5Y Forecast (Base Case)</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Horizon</th>
+              <th>Target</th>
+              <th>Expected Return</th>
+              <th>CAGR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {horizons.map(({ key, horizonData }) => {
+              const base = horizonData.scenarios.base;
+              return (
+                <tr key={key}>
+                  <td>{horizonData.horizon}</td>
+                  <td>₹{Number(base.price).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+                  <td>{base.returnPct >= 0 ? "+" : ""}{base.returnPct}%</td>
+                  <td>{base.cagrPct}%</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
       {/* ── 3 Horizon Forecast Cards (1Y · 3Y · 5Y) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
+      <div className="no-print grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
         {horizons.map(({ key, horizonData, tag, icon: Icon, border, bg, text, badge }) => {
           const scenarioData = horizonData.scenarios[selectedScenario];
           const isSelected = selectedHorizon === key || selectedHorizon === "all";
