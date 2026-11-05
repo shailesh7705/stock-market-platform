@@ -8,6 +8,7 @@ import StockDetailsPage from "./pages/StockDetailsPage";
 import WatchlistPage from "./pages/WatchlistPage";
 import AlertsPage from "./pages/AlertsPage";
 import PortfolioPage from "./pages/PortfolioPage";
+import MarketsPage from "./pages/MarketsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotificationListener from "./components/notifications/NotificationListener";
 
@@ -54,6 +55,15 @@ function App() {
           element={
             <ProtectedRoute>
               <PortfolioPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/markets"
+          element={
+            <ProtectedRoute>
+              <MarketsPage />
             </ProtectedRoute>
           }
         />

@@ -81,7 +81,25 @@ async function enrichHolding(doc) {
     pulseScore: pulse?.score ?? null,
     pulseGrade: pulse?.grade ?? null,
     pulseGradeLabel: pulse?.gradeLabel ?? null,
+    sector: details?.assetProfile?.sector && details.assetProfile.sector !== "N/A"
+      ? details.assetProfile.sector
+      : "Unclassified",
+    annualDividendPerShare: details?.annualDividendPerShare ?? null,
+    annualDividendCash: details?.annualDividendPerShare
+      ? round2(quantity * Number(details.annualDividendPerShare))
+      : 0,
     quoteAvailable: livePrice !== null,
+  };
+}
+
+function applyDiversification(score, alerts) {
+  if (score === null || score === undefined) return { score: null, penalty: 0 };
+  const stockBreach = alerts.some((alert) => alert.type === "stock");
+  const sectorBreach = alerts.some((alert) => alert.type === "sector");
+  const penalty = (stockBreach ? 8 : 0) + (sectorBreach ? 6 : 0);
+  return {
+    score: Number(Math.max(0, score - penalty).toFixed(1)),
+    penalty,
   };
 }
 
@@ -104,8 +122,75 @@ function buildSummary(holdings) {
     weight += basis;
   }
 
-  const portfolioPulseScore = weight > 0 ? Number((weighted / weight).toFixed(1)) : null;
-  const grade = gradeFromScore(portfolioPulseScore);
+  const rawPulseScore = weight > 0 ? Number((weighted / weight).toFixed(1)) : null;
+  const basisOf = (holding) => (
+    holding.currentValue > 0 ? holding.currentValue : holding.investedValue
+  );
+  const totalBasis = holdings.reduce((sum, holding) => sum + (basisOf(holding) || 0), 0);
+  const concentrationAlerts = [];
+
+  holdings.forEach((holding) => {
+    const basis = basisOf(holding) || 0;
+    const weightPct = totalBasis > 0 ? (basis / totalBasis) * 100 : 0;
+    if (weightPct > 25) {
+      concentrationAlerts.push({
+        type: "stock",
+        symbol: holding.symbol,
+        name: holding.companyName,
+        weight: round2(weightPct),
+        threshold: 25,
+      });
+    }
+  });
+
+  const sectorBasis = {};
+  holdings.forEach((holding) => {
+    const sector = holding.sector || "Unclassified";
+    sectorBasis[sector] = (sectorBasis[sector] || 0) + (basisOf(holding) || 0);
+  });
+  Object.entries(sectorBasis).forEach(([sector, basis]) => {
+    const weightPct = totalBasis > 0 ? (basis / totalBasis) * 100 : 0;
+    if (weightPct > 45) {
+      concentrationAlerts.push({
+        type: "sector",
+        sector,
+        weight: round2(weightPct),
+        threshold: 45,
+      });
+    }
+  });
+
+  const sectors = Object.entries(sectorBasis).map(([sector, basis]) => ({
+    sector,
+    invested: round2(holdings
+      .filter((holding) => (holding.sector || "Unclassified") === sector)
+      .reduce((sum, holding) => sum + (holding.investedValue || 0), 0)),
+    current: round2(holdings
+      .filter((holding) => (holding.sector || "Unclassified") === sector)
+      .reduce((sum, holding) => sum + (holding.currentValue || holding.investedValue || 0), 0)),
+    weight: totalBasis > 0 ? round2((basis / totalBasis) * 100) : 0,
+  })).sort((a, b) => b.current - a.current);
+
+  const adjusted = applyDiversification(rawPulseScore, concentrationAlerts);
+  const grade = gradeFromScore(adjusted.score);
+  const annualDividendIncome = round2(holdings.reduce((sum, holding) => sum + (holding.annualDividendCash || 0), 0));
+  const yieldOnCost = totalInvested > 0 ? round2((annualDividendIncome / totalInvested) * 100) : 0;
+  const quarterly = round2(annualDividendIncome / 4);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    .map((month, index) => ({
+      month,
+      amount: [2, 5, 8, 11].includes(index) ? quarterly : 0,
+    }));
+  const topDividendPayers = [...holdings]
+    .filter((holding) => holding.annualDividendCash > 0)
+    .sort((a, b) => b.annualDividendCash - a.annualDividendCash)
+    .slice(0, 3)
+    .map((holding) => ({
+      symbol: holding.symbol,
+      companyName: holding.companyName,
+      annualDividendCash: holding.annualDividendCash,
+      annualDividendPerShare: holding.annualDividendPerShare,
+    }));
 
   return {
     totalInvested: round2(totalInvested),
@@ -113,11 +198,19 @@ function buildSummary(holdings) {
     totalPnL: round2(totalPnL),
     totalPnLPct: round2(totalPnLPct),
     todayPnL: round2(todayPnL),
-    portfolioPulseScore,
+    portfolioPulseScore: adjusted.score,
+    portfolioPulseScoreRaw: rawPulseScore,
+    diversificationPenalty: adjusted.penalty,
     portfolioGrade: grade.grade,
     portfolioGradeLabel: grade.gradeLabel,
     holdingsCount: holdings.length,
     quotesPartial: quoted.length !== holdings.length,
+    concentrationAlerts,
+    sectors,
+    annualDividendIncome,
+    yieldOnCost,
+    dividendCalendar: months,
+    topDividendPayers,
   };
 }
 
@@ -245,6 +338,73 @@ const updateHolding = async (req, res) => {
   }
 };
 
+async function mergeHolding(userId, input) {
+  const symbol = normalizeSymbol(input.symbol);
+  if (!symbol) return { error: "Symbol is required" };
+  const qty = parsePositive(input.quantity, "Quantity");
+  if (qty.error) return { error: qty.error };
+  const price = parsePositive(input.avgBuyPrice, "Average buy price");
+  if (price.error) return { error: price.error };
+
+  const existing = await Portfolio.findOne({ user: userId, symbol });
+  if (existing) {
+    const oldQty = Number(existing.quantity);
+    const oldAvg = Number(existing.avgBuyPrice);
+    existing.quantity = Number((oldQty + qty.value).toFixed(4));
+    existing.avgBuyPrice = Number((((oldQty * oldAvg) + (qty.value * price.value)) / (oldQty + qty.value)).toFixed(4));
+    if (input.companyName) existing.companyName = String(input.companyName).trim();
+    if (input.buyDate) existing.buyDate = new Date(input.buyDate);
+    if (input.broker) existing.broker = String(input.broker).trim();
+    await existing.save();
+    return { symbol, merged: true };
+  }
+
+  await Portfolio.create({
+    user: userId,
+    symbol,
+    companyName: input.companyName ? String(input.companyName).trim() : symbol.replace(".NS", "").replace(".BO", ""),
+    quantity: qty.value,
+    avgBuyPrice: price.value,
+    buyDate: input.buyDate ? new Date(input.buyDate) : new Date(),
+    notes: "",
+    broker: input.broker ? String(input.broker).trim() : "Manual",
+  });
+  return { symbol, merged: false };
+}
+
+const bulkAddHoldings = async (req, res) => {
+  try {
+    const rows = Array.isArray(req.body?.holdings) ? req.body.holdings : null;
+    if (!rows || rows.length === 0) {
+      return res.status(400).json({ message: "No holdings to import" });
+    }
+    if (rows.length > 100) {
+      return res.status(400).json({ message: "Import up to 100 holdings at a time" });
+    }
+
+    const broker = req.body?.broker ? String(req.body.broker).trim() : "CSV";
+    const imported = [];
+    const errors = [];
+
+    for (const row of rows) {
+      const result = await mergeHolding(req.user._id, { ...row, broker });
+      if (result.error) errors.push({ symbol: row?.symbol || "", message: result.error });
+      else imported.push(result);
+    }
+
+    const payload = await portfolioPayload(req.user._id);
+    return res.status(201).json({
+      imported: imported.length,
+      results: imported,
+      errors,
+      ...payload,
+    });
+  } catch (error) {
+    console.error("[Portfolio] Bulk import error:", error.message);
+    return res.status(500).json({ message: "Failed to import holdings" });
+  }
+};
+
 const deleteHolding = async (req, res) => {
   try {
     const { id } = req.params;
@@ -267,6 +427,7 @@ const deleteHolding = async (req, res) => {
 module.exports = {
   getPortfolio,
   addHolding,
+  bulkAddHoldings,
   updateHolding,
   deleteHolding,
 };

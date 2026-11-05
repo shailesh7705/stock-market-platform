@@ -9,6 +9,7 @@ import {
   LogOut,
   Zap,
   Activity,
+  Compass,
   X,
   ChevronRight,
 } from "lucide-react";
@@ -37,6 +38,12 @@ function Sidebar({ onCloseMobile }) {
       title: "Portfolio",
       path: "/portfolio",
       icon: Activity,
+      badge: null,
+    },
+    {
+      title: "Markets",
+      path: "/markets",
+      icon: Compass,
       badge: null,
     },
     {

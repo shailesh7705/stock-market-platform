@@ -14,6 +14,7 @@ import {
   Activity,
   Layers,
   Search,
+  Compass,
   ChevronDown,
   Sparkles,
 } from "lucide-react";
@@ -167,6 +168,12 @@ export default function TopNavbar({ onOpenMobileMenu }) {
       path: "/portfolio",
       icon: Activity,
       isActive: location.pathname === "/portfolio",
+    },
+    {
+      label: "Markets",
+      path: "/markets",
+      icon: Compass,
+      isActive: location.pathname === "/markets",
     },
     {
       label: "Watchlist",

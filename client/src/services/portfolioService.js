@@ -10,6 +10,11 @@ export const addHolding = async (payload) => {
   return response.data;
 };
 
+export const bulkImportHoldings = async (payload) => {
+  const response = await API.post("/portfolio/bulk", payload);
+  return response.data;
+};
+
 export const updateHolding = async (id, payload) => {
   const response = await API.put(`/portfolio/${id}`, payload);
   return response.data;

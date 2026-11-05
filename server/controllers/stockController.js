@@ -9,6 +9,8 @@ const {
   calculatePulseScore,
 } = require("../utils/pulseScore");
 const { calculateForecast } = require("../utils/forecastEngine");
+const { SCREENER_UNIVERSE, findPeerGroup } = require("../data/peerGroups");
+const { toPercent, debtToEquityRatio, sma, rsi, cagr, mapPool } = require("../utils/marketMath");
 
 const YF_OPTS = { validateResult: false };
 
@@ -602,6 +604,10 @@ async function fetchSingleStockDetails(rawSymbol) {
   // Dividend Yield normalization
   const rawDividendYield = summaryDetail?.dividendYield ?? quote?.dividendYield ?? financialData?.dividendYield ?? null;
   const dividendYield = parseDividendYield(rawDividendYield);
+  const annualDividendPerShare = dividendYield && livePrice
+    ? Number(((Number(dividendYield) / 100) * Number(livePrice)).toFixed(2))
+    : null;
+  const oneYearReturn = toPercent(quote?.fiftyTwoWeekChangePercent);
 
   // Calculate PulseScore
   const pulseScore = calculatePulseScore(summary, livePrice);
@@ -626,10 +632,11 @@ async function fetchSingleStockDetails(rawSymbol) {
     dayLow: quote?.regularMarketDayLow || null,
     fiftyTwoWeekHigh: quote?.fiftyTwoWeekHigh || null,
     fiftyTwoWeekLow: quote?.fiftyTwoWeekLow || null,
-    fiftyTwoWeekChangePercent: quote?.fiftyTwoWeekChangePercent || null,
+    fiftyTwoWeekChangePercent: oneYearReturn,
     currency: quote?.currency || "INR",
     exchange: quote?.fullExchangeName || "NSE",
     dividendYield,
+    annualDividendPerShare,
     assetProfile: {
       sector: assetProfile.sector || "N/A",
       industry: assetProfile.industry || "N/A",
@@ -646,6 +653,9 @@ async function fetchSingleStockDetails(rawSymbol) {
       recommendationKey: financialData.recommendationKey || "none",
       debtToEquity: financialData.debtToEquity ?? null,
       returnOnEquity: financialData.returnOnEquity ?? null,
+      returnOnAssets: financialData.returnOnAssets ?? null,
+      earningsGrowth: financialData.earningsGrowth ?? null,
+      revenueGrowth: financialData.revenueGrowth ?? null,
       operatingMargins: financialData.operatingMargins ?? null,
       profitMargins: financialData.profitMargins ?? null,
       totalRevenue: financialData.totalRevenue ?? null,
@@ -729,6 +739,153 @@ const getBatchStockDetails = async (req, res) => {
   }
 };
 
+function researchMetrics(details) {
+  if (!details) return null;
+  const trend = details.recommendationTrend || {};
+  const ratings = ["strongBuy", "buy", "hold", "sell", "strongSell"].reduce(
+    (sum, key) => sum + Number(trend[key] || 0),
+    0
+  );
+  const buyConsensus = ratings > 0
+    ? Number((((Number(trend.strongBuy || 0) + Number(trend.buy || 0)) / ratings) * 100).toFixed(1))
+    : null;
+  const trailingPE = details.valuation?.stockPE ?? details.defaultKeyStatistics?.trailingPE ?? null;
+  const dividendYield = details.dividendYield ?? null;
+  const payoutRatio = trailingPE && dividendYield ? Number((dividendYield * trailingPE).toFixed(1)) : null;
+  const solvencyScore = details.pulseScore?.pillars?.pillar2_solvency?.score ?? null;
+  const price = Number(details.price) || 0;
+  const high = Number(details.fiftyTwoWeekHigh) || 0;
+
+  return {
+    symbol: details.symbol,
+    name: details.shortName || details.name,
+    sector: details.assetProfile?.sector || "N/A",
+    industry: details.assetProfile?.industry || "N/A",
+    price: price || null,
+    pulseScore: details.pulseScore?.score ?? null,
+    pulseGrade: details.pulseScore?.grade ?? null,
+    trailingPE,
+    sectorMedianPE: details.valuation?.sectorMedianPE ?? null,
+    priceToBook: details.defaultKeyStatistics?.priceToBook ?? null,
+    pegRatio: details.valuation?.pegRatio ?? details.defaultKeyStatistics?.pegRatio ?? null,
+    roe: toPercent(details.financialData?.returnOnEquity),
+    roce: toPercent(details.financialData?.returnOnAssets),
+    operatingMargin: toPercent(details.financialData?.operatingMargins),
+    debtToEquity: debtToEquityRatio(details.financialData?.debtToEquity),
+    interestCoverage: null,
+    dividendYield,
+    payoutRatio,
+    solvencyScore,
+    oneYearReturn: details.fiftyTwoWeekChangePercent ?? null,
+    earningsGrowth: toPercent(details.financialData?.earningsGrowth),
+    revenueGrowth: toPercent(details.financialData?.revenueGrowth),
+    profitGrowth: [toPercent(details.financialData?.earningsGrowth), toPercent(details.financialData?.revenueGrowth)]
+      .some((value) => value !== null && Number(value) > 0),
+    buyConsensus,
+    nearHigh: price > 0 && high > 0 ? price >= high * 0.95 : false,
+  };
+}
+
+async function closesFor(symbol, years) {
+  const cacheKey = `closes_${years}_${symbol}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  const period1 = new Date(Date.now() - years * 365 * 24 * 60 * 60 * 1000);
+  const interval = years > 1 ? "1wk" : "1d";
+  try {
+    const chart = await Promise.race([
+      yahooFinance.chart(symbol, { period1, interval }, YF_OPTS),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000)),
+    ]);
+    const closes = (chart?.quotes || []).map((quote) => Number(quote.close)).filter((price) => price > 0);
+    setCache(cacheKey, closes, 10 * 60 * 1000);
+    return closes;
+  } catch (error) {
+    console.warn(`[Research] Chart failed for ${symbol}:`, error.message);
+    return [];
+  }
+}
+
+async function withTechnicals(metrics, includeThreeYear = false) {
+  if (!metrics) return null;
+  const daily = await closesFor(metrics.symbol, 1.2);
+  const weekly = includeThreeYear ? await closesFor(metrics.symbol, 3.2) : [];
+  const average50 = sma(daily, 50);
+  const average200 = sma(daily, 200);
+  const price = Number(metrics.price) || 0;
+  return {
+    ...metrics,
+    rsi: rsi(daily, 14),
+    aboveSma50: average50 ? price > average50 : false,
+    aboveSma200: average200 ? price > average200 : false,
+    threeYearCagr: weekly.length > 20 ? cagr(weekly[0], weekly[weekly.length - 1], 3) : null,
+  };
+}
+
+const getPeerComparison = async (req, res) => {
+  try {
+    let symbol = String(req.params.symbol || "").trim().toUpperCase();
+    if (!symbol) return res.status(400).json({ message: "Symbol is required" });
+    if (!symbol.includes(".")) symbol = `${symbol}.NS`;
+
+    const cacheKey = `peers_${symbol}`;
+    const cached = getCache(cacheKey);
+    if (cached) return res.json(cached);
+
+    const group = findPeerGroup(symbol);
+    const symbols = group
+      ? [symbol, ...group.symbols.filter((item) => item !== symbol)].slice(0, 5)
+      : [symbol];
+
+    const details = await mapPool(symbols, 4, (item) => fetchSingleStockDetails(item));
+    let rows = details.filter(Boolean).map(researchMetrics).filter(Boolean);
+    rows = await mapPool(rows, 3, (row) => withTechnicals(row, true));
+
+    if (!group && rows[0]?.sector && rows[0].sector !== "N/A") {
+      const sameSector = SCREENER_UNIVERSE.filter((item) => item !== symbol).slice(0, 8);
+      const extras = await mapPool(sameSector, 4, async (item) => {
+        const detail = await fetchSingleStockDetails(item);
+        if (!detail || detail.assetProfile?.sector !== rows[0].sector) return null;
+        return withTechnicals(researchMetrics(detail), true);
+      });
+      rows = rows.concat(extras.filter(Boolean)).slice(0, 5);
+    }
+
+    const payload = {
+      symbol,
+      industry: group?.industry || rows[0]?.industry || "Sector peers",
+      peers: rows,
+    };
+    setCache(cacheKey, payload, 10 * 60 * 1000);
+    return res.json(payload);
+  } catch (error) {
+    console.error("[Peers] Error:", error.message);
+    return res.status(500).json({ message: "Failed to build peer comparison" });
+  }
+};
+
+const getCuratedScreeners = async (req, res) => {
+  try {
+    const cached = getCache("screener_universe");
+    if (cached) return res.json(cached);
+
+    const rows = await mapPool(SCREENER_UNIVERSE, 5, async (symbol) => {
+      const details = await fetchSingleStockDetails(symbol);
+      return withTechnicals(researchMetrics(details), false);
+    });
+
+    const payload = {
+      updatedAt: new Date().toISOString(),
+      stocks: rows.filter(Boolean),
+    };
+    setCache("screener_universe", payload, 10 * 60 * 1000);
+    return res.json(payload);
+  } catch (error) {
+    console.error("[Screeners] Error:", error.message);
+    return res.status(500).json({ message: "Failed to build screener universe" });
+  }
+};
+
 module.exports = {
   getLiveStocks,
   getHistoricalData,
@@ -738,4 +895,6 @@ module.exports = {
   getStockDetails,
   getBatchStockDetails,
   fetchSingleStockDetails,
+  getPeerComparison,
+  getCuratedScreeners,
 };

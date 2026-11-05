@@ -40,6 +40,16 @@ export const getStockDetails = async (symbol) => {
   }
 };
 
+export const getPeerComparison = async (symbol) => {
+  const response = await API.get(`/stocks/peers/${symbol}`, { timeout: 45000 });
+  return response.data;
+};
+
+export const getCuratedScreeners = async () => {
+  const response = await API.get("/stocks/screeners", { timeout: 90000 });
+  return response.data;
+};
+
 export const getBatchStockDetails = async (symbols) => {
   try {
     const response = await API.get(`/stocks/details/batch?symbols=${symbols.join(",")}`);

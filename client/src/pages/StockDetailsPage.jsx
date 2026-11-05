@@ -24,6 +24,7 @@ import StockDetailsChart from "../components/charts/StockDetailsChart";
 import StockInsights from "../components/stocks/StockInsights";
 import CompanyProsCons from "../components/stocks/CompanyProsCons";
 import StockDossier from "../components/stocks/StockDossier";
+import PeerComparisonMatrix from "../components/stocks/PeerComparisonMatrix";
 import RecentlyViewedCarousel, { saveRecentlyViewedStock } from "../components/stocks/RecentlyViewedCarousel";
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
 import useWatchlistStore from "../store/watchlistStore";
@@ -351,6 +352,8 @@ function StockDetailsPage() {
         {details && (
           <StockDossier details={details} livePrice={stock?.price} />
         )}
+
+        <PeerComparisonMatrix symbol={nsSymbol} />
 
         {/* ── Pros & Cons (Investment Checklist) ── */}
         <div className="no-print w-full">

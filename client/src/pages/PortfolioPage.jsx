@@ -6,6 +6,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Upload,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -21,6 +22,9 @@ import {
   getPortfolio,
   updateHolding,
 } from "../services/portfolioService";
+import BrokerImportModal from "../components/portfolio/BrokerImportModal";
+import SectorAllocationDonut from "../components/portfolio/SectorAllocationDonut";
+import DividendCashflowWidget from "../components/portfolio/DividendCashflowWidget";
 import { getLiveStocks, searchStocks } from "../services/stockService";
 import toast from "react-hot-toast";
 
@@ -77,6 +81,7 @@ export default function PortfolioPage() {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [alertStock, setAlertStock] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const loadPortfolio = async () => {
     try {
@@ -256,7 +261,7 @@ export default function PortfolioPage() {
         label: "Portfolio Quality Score",
         value: score === null || score === undefined ? "—" : `${score}`,
         hint: summary?.portfolioGrade
-          ? `Grade ${summary.portfolioGrade} · ${summary.portfolioGradeLabel}`
+          ? `Grade ${summary.portfolioGrade}${summary.diversificationPenalty ? ` · -${summary.diversificationPenalty} concentration` : ""}`
           : "Add holdings to score the book",
         hintClass: "text-amber-300",
       },
@@ -278,13 +283,22 @@ export default function PortfolioPage() {
               Quantity, average price, live P&amp;L, and a value-weighted PulseScore.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="h-11 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold flex items-center justify-center gap-2"
-          >
-            <Plus size={16} /> Add Stock Holding
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="h-11 px-4 rounded-2xl bg-white/5 border border-white/10 text-white text-xs font-extrabold flex items-center justify-center gap-2"
+            >
+              <Upload size={16} /> Import CSV
+            </button>
+            <button
+              type="button"
+              onClick={openAdd}
+              className="h-11 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold flex items-center justify-center gap-2"
+            >
+              <Plus size={16} /> Add Stock Holding
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -309,6 +323,11 @@ export default function PortfolioPage() {
               </p>
             </div>
           ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <SectorAllocationDonut sectors={summary?.sectors || []} alerts={summary?.concentrationAlerts || []} />
+          <DividendCashflowWidget summary={summary} />
         </div>
 
         <div className="rounded-3xl border border-amber-500/20 bg-gradient-to-r from-amber-500/10 via-[#0e1626] to-[#0e1626] p-5">
@@ -538,6 +557,18 @@ export default function PortfolioPage() {
       )}
 
       <CreateAlertModal open={Boolean(alertStock)} onClose={() => setAlertStock(null)} stock={alertStock || {}} />
+      <BrokerImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={(result) => {
+          if (Array.isArray(result?.holdings)) {
+            setHoldings(result.holdings);
+            setSummary(result.summary || null);
+          } else {
+            loadPortfolio();
+          }
+        }}
+      />
     </AppLayout>
   );
 }
