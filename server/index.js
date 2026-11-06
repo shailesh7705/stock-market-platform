@@ -112,7 +112,8 @@ app.use((req, res, next) => {
 });
 
 // ─── DB + Services ────────────────────────────────────────────────────────────
-connectDB().then(() => startAlertEngine());
+startAlertEngine();
+connectDB();
 startLiveHub();
 startKeepAlive();
 

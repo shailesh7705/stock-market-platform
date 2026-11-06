@@ -117,7 +117,10 @@ const alerts = {
     body: z.object({
       symbol: tradableSymbol,
       targetPrice: positiveNumber("Target price"),
-      condition: z.enum(["above", "below"]).optional(),
+      condition: z.enum(
+        ["above", "below"],
+        "Choose whether the price should rise above or fall below the target"
+      ),
       notes: optionalText(280),
     }),
   },
@@ -125,6 +128,7 @@ const alerts = {
     params: idParam,
     body: z.object({
       targetPrice: positiveNumber("Target price").optional(),
+      condition: z.enum(["above", "below"]).optional(),
       rearm: z.boolean().optional(),
     }),
   },

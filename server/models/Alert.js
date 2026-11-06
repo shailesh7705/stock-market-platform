@@ -44,6 +44,10 @@ const alertSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    emailStatus: {
+      type: String,
+      enum: ["pending", "sent", "failed", "skipped"],
+    },
     notes: {
       type: String,
       default: "",

@@ -121,7 +121,7 @@ function AlertsPage() {
       );
     } catch (err) {
       console.error(err);
-      toast.error("Failed to update alert");
+      toast.error(err.response?.data?.message || "Failed to update alert");
     }
   };
 
