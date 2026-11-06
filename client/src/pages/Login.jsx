@@ -24,19 +24,17 @@ function Login({ isModal = false, onSwitchToSignup }) {
     }
   }, [location.search]);
 
-  async function handleLogin(e, customEmail, customPassword) {
-    if (e) e.preventDefault();
-    const loginEmail = customEmail || email;
-    const loginPass = customPassword || password;
+  async function handleLogin(e) {
+    e.preventDefault();
 
-    if (!loginEmail || !loginPass) {
+    if (!email || !password) {
       toast.error("Please fill in both email and password");
       return;
     }
 
     try {
       setLoading(true);
-      const data = await loginUser({ email: loginEmail, password: loginPass });
+      const data = await loginUser({ email, password });
       setAuth(data.user, data.token);
       toast.success(`Welcome back, ${data.user?.name || "Investor"}!`, { icon: "👋" });
       navigate("/dashboard");
@@ -47,13 +45,6 @@ function Login({ isModal = false, onSwitchToSignup }) {
       setLoading(false);
     }
   }
-
-  // 1-Click Fast Login Helper
-  const handleQuickLogin = (userEmail, userPassword) => {
-    setEmail(userEmail);
-    setPassword(userPassword);
-    handleLogin(null, userEmail, userPassword);
-  };
 
   const formContent = (
     <div className="w-full">
@@ -89,7 +80,7 @@ function Login({ isModal = false, onSwitchToSignup }) {
         </div>
       )}
 
-      <form onSubmit={(e) => handleLogin(e)} className="space-y-4">
+      <form onSubmit={handleLogin} className="space-y-4">
         {/* Email Input */}
         <div>
           <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
@@ -161,42 +152,8 @@ function Login({ isModal = false, onSwitchToSignup }) {
           </button>
         </div>
 
-        {/* 1-Click Fast Accounts */}
-        <div className="pt-2 border-t border-white/[0.08]">
-          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider text-center mb-2.5">
-            Quick 1-Click Access
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("shaileshkumaar4455@gmail.com", "shailesh123")}
-              className="px-2.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-left transition-all group"
-            >
-              <span className="block text-[11px] font-bold text-white group-hover:text-emerald-400 transition-colors truncate">
-                Shailesh Kumaar
-              </span>
-              <span className="block text-[9px] text-gray-400 truncate">
-                shaileshkumaar4455...
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("demo@stockpulse.com", "demo1234")}
-              className="px-2.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-left transition-all group"
-            >
-              <span className="block text-[11px] font-bold text-white group-hover:text-cyan-400 transition-colors truncate">
-                Demo Investor
-              </span>
-              <span className="block text-[9px] text-gray-400 truncate">
-                demo@stockpulse.com
-              </span>
-            </button>
-          </div>
-        </div>
-
         {/* Switch Link */}
-        <p className="text-center text-xs text-gray-400 pt-1">
+        <p className="text-center text-xs text-gray-400 pt-3 border-t border-white/[0.08]">
           Don't have an account?{" "}
           {isModal ? (
             <button
