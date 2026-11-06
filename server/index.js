@@ -36,39 +36,35 @@ app.use(
 );
 
 // ─── CORS Configuration ───────────────────────────────────────────────────────
-const allowedOrigins = [
-  "https://stockpulse-mu-three.vercel.app",
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "http://localhost:4173",
-];
+const isProduction = process.env.NODE_ENV === "production";
+const trimOrigin = (value) => value.trim().replace(/\/+$/, "");
 
-if (process.env.FRONTEND_URL) {
-  allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/+$/, ""));
-}
+const allowedOrigins = new Set(
+  [
+    "https://stockpulse-mu-three.vercel.app",
+    process.env.FRONTEND_URL,
+    ...(process.env.ALLOWED_ORIGINS || "").split(","),
+  ]
+    .filter(Boolean)
+    .map(trimOrigin)
+);
+
+const VERCEL_PREVIEW_ORIGIN = /^https:\/\/stockpulse(-[a-z0-9-]+)?\.vercel\.app$/;
+const LOCALHOST_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+
+const isAllowedOrigin = (origin) =>
+  allowedOrigins.has(origin) ||
+  VERCEL_PREVIEW_ORIGIN.test(origin) ||
+  (!isProduction && LOCALHOST_ORIGIN.test(origin));
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow server-to-server requests, mobile apps, curl, or no-origin
-      if (!origin) return callback(null, true);
+      // Requests without an Origin header (curl, server-to-server, same-origin) are not subject to CORS.
+      if (!origin || isAllowedOrigin(origin)) return callback(null, true);
 
-      // Check allowed list
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-
-      // Allow any Vercel deployment preview / production domain (*.vercel.app)
-      if (/^https:\/\/[a-zA-Z0-9_-]+\.vercel\.app$/.test(origin)) {
-        return callback(null, true);
-      }
-
-      // Allow localhost with any port in development
-      if (/^http:\/\/localhost:\d+$/.test(origin)) {
-        return callback(null, true);
-      }
-
-      // Fallback: allow to avoid breaking deployments, but log
-      console.warn(`[CORS] Allowed origin through fallback: ${origin}`);
-      return callback(null, true);
+      console.warn(`[CORS] Blocked origin: ${origin}`);
+      return callback(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
