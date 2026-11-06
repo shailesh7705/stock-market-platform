@@ -34,6 +34,16 @@ export const deleteAlert = async (id) => {
   }
 };
 
+export const updateAlert = async (id, payload) => {
+  try {
+    const response = await API.patch(`/alerts/${id}`, payload);
+    return response.data;
+  } catch (error) {
+    console.error("Update Alert Error:", error);
+    throw error;
+  }
+};
+
 /* Toggle / Re-arm Alert */
 export const toggleAlert = async (id) => {
   try {

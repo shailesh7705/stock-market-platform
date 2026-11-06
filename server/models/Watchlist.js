@@ -19,6 +19,22 @@ const watchlistSchema = new mongoose.Schema({
   default: ""
 },
 
+  listName: {
+    type: String,
+    default: "My Watchlist",
+    trim: true,
+  },
+
+  tags: {
+    type: [String],
+    default: [],
+  },
+
+  position: {
+    type: Number,
+    default: 0,
+  },
+
 }, {
   timestamps: true
 });

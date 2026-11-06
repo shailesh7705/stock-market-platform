@@ -15,8 +15,10 @@ const alertRoutes = require("./routes/alertRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const newsRoutes = require("./routes/newsRoutes");
 const portfolioRoutes = require("./routes/portfolioRoutes");
+const streamRoutes = require("./routes/streamRoutes");
 const { apiLimiter } = require("./middleware/rateLimiters");
 const startAlertEngine = require("./utils/alertEngine");
+const { startLiveHub } = require("./utils/liveHub");
 const startKeepAlive = require("./utils/keepAlive");
 
 const app = express();
@@ -89,6 +91,7 @@ app.use((req, _res, next) => {
 });
 app.use(mongoSanitize());
 
+app.use("/api/stream", streamRoutes);
 app.use("/api", apiLimiter);
 
 // Disable caching on all API responses
@@ -102,6 +105,7 @@ app.use((req, res, next) => {
 // ─── DB + Services ────────────────────────────────────────────────────────────
 connectDB();
 startAlertEngine();
+startLiveHub();
 startKeepAlive();
 
 // ─── Routes ───────────────────────────────────────────────────────────────────

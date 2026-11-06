@@ -131,6 +131,11 @@ function Login({ isModal = false, onSwitchToSignup }) {
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+          <div className="flex justify-end mt-1.5">
+            <Link to="/forgot-password" className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300">
+              Forgot password?
+            </Link>
+          </div>
         </div>
 
         {/* Submit */}

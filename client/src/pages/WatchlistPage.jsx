@@ -1,29 +1,32 @@
 // client/src/pages/WatchlistPage.jsx
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import Card from "../components/ui/Card";
 import {
   Bookmark,
-  Bell,
-  Trash2,
-  ExternalLink,
   TrendingUp,
   TrendingDown,
   Search,
   Plus,
-  ArrowUpRight,
-  ArrowDownRight,
-  Sparkles,
-  Zap,
+  Download,
+  FolderPlus,
 } from "lucide-react";
-import { Sparklines, SparklinesLine } from "react-sparklines";
-import { motion, AnimatePresence } from "framer-motion";
-import { getWatchlist, removeFromWatchlist, addToWatchlist } from "../services/watchlistService";
+import {
+  getWatchlist,
+  removeFromWatchlist,
+  addToWatchlist,
+  getWatchlistBoards,
+  createWatchlistBoard,
+  deleteWatchlistBoard,
+  reorderWatchlist,
+  updateWatchlistItem,
+  exportWatchlist,
+} from "../services/watchlistService";
+import SortableWatchlist from "../components/watchlist/SortableWatchlist";
 import { getLiveStocks, searchStocks, getBatchStockDetails } from "../services/stockService";
 import useWatchlistStore from "../store/watchlistStore";
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
-import CompanyLogo from "../components/ui/CompanyLogo";
 import PortfolioDiagnosticWidget from "../components/stocks/PortfolioDiagnosticWidget";
 import RecentlyViewedCarousel from "../components/stocks/RecentlyViewedCarousel";
 import toast from "react-hot-toast";
@@ -34,6 +37,8 @@ function cleanSymbol(sym = "") {
 
 function WatchlistPage() {
   const { watchlist, setWatchlist, removeStock, addStock } = useWatchlistStore();
+  const watchlistRef = useRef(watchlist);
+  watchlistRef.current = watchlist;
   const [loading, setLoading] = useState(true);
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
@@ -41,10 +46,14 @@ function WatchlistPage() {
   const [addQuery, setAddQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [boards, setBoards] = useState([{ name: "My Watchlist", count: 0 }]);
+  const [activeList, setActiveList] = useState("My Watchlist");
+  const [newListName, setNewListName] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchWatchlist();
+    loadBoards();
   }, []);
 
   useEffect(() => {
@@ -53,6 +62,18 @@ function WatchlistPage() {
     const interval = setInterval(fetchLivePrices, 15000);
     return () => clearInterval(interval);
   }, [watchlist.length]);
+
+  const loadBoards = async () => {
+    try {
+      const data = await getWatchlistBoards();
+      if (Array.isArray(data) && data.length) {
+        setBoards(data);
+        setActiveList((current) => (data.some((board) => board.name === current) ? current : data[0].name));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchWatchlist = async () => {
     try {
@@ -67,7 +88,8 @@ function WatchlistPage() {
 
   const fetchLivePrices = async () => {
     try {
-      const symbols = watchlist.map((s) => s.symbol).filter(Boolean);
+      const current = watchlistRef.current || [];
+      const symbols = current.map((s) => s.symbol).filter(Boolean);
       if (!symbols.length) return;
 
       const [liveData, batchDetails] = await Promise.allSettled([
@@ -83,7 +105,7 @@ function WatchlistPage() {
         if (d?.symbol) detailsMap[d.symbol] = d;
       });
 
-      const updated = watchlist.map((stock) => {
+      const updated = current.map((stock) => {
         const live = liveList.find((item) => item.symbol === stock.symbol);
         const det = detailsMap[stock.symbol];
         return {
@@ -147,29 +169,121 @@ function WatchlistPage() {
   }, [addQuery]);
 
   const handleQuickAdd = async (stock) => {
-    if (watchlist.some((w) => w.symbol === stock.symbol)) {
-      toast.error(`${cleanSymbol(stock.symbol)} is already tracked`);
+    if (watchlist.some((w) => w.symbol === stock.symbol && (w.listName || "My Watchlist") === activeList)) {
+      toast.error(`${cleanSymbol(stock.symbol)} is already in ${activeList}`);
       return;
     }
     try {
       const saved = await addToWatchlist({
         symbol: stock.symbol,
         name: stock.name,
+        listName: activeList,
       });
       addStock(saved);
       toast.success(`${cleanSymbol(stock.symbol)} added to watchlist!`);
       setAddQuery("");
       setSearchResults([]);
+      loadBoards();
     } catch (err) {
-      toast.error("Failed to add stock");
+      toast.error(err.response?.data?.message || "Failed to add stock");
     }
   };
 
-  const filteredWatchlist = (watchlist || []).filter((s) => {
+  const listNameOf = (stock) => stock.listName || "My Watchlist";
+
+  const boardItems = (watchlist || []).filter((stock) => {
+    if (listNameOf(stock) !== activeList) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
-    return s.symbol.toLowerCase().includes(q) || (s.name || "").toLowerCase().includes(q);
+    return stock.symbol.toLowerCase().includes(q) || (stock.name || "").toLowerCase().includes(q);
   });
+
+  const handleReorder = async (nextItems) => {
+    if (searchQuery.trim()) {
+      toast.error("Clear the filter before reordering");
+      return;
+    }
+    const others = (watchlist || []).filter((stock) => listNameOf(stock) !== activeList);
+    setWatchlist([...others, ...nextItems]);
+    try {
+      await reorderWatchlist(activeList, nextItems.map((item) => item._id));
+    } catch {
+      toast.error("Could not save the new order");
+      fetchWatchlist();
+    }
+  };
+
+  const handleCreateList = async (event) => {
+    event.preventDefault();
+    const name = newListName.trim();
+    if (!name) return;
+    try {
+      await createWatchlistBoard(name);
+      setNewListName("");
+      setActiveList(name);
+      await loadBoards();
+      toast.success(`${name} created`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not create that list");
+    }
+  };
+
+  const handleDeleteList = async (name) => {
+    try {
+      await deleteWatchlistBoard(name);
+      if (activeList === name) setActiveList("My Watchlist");
+      await Promise.all([loadBoards(), fetchWatchlist()]);
+      toast.success(`${name} folded into My Watchlist`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not remove that list");
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const blob = await exportWatchlist(activeList);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${activeList.replace(/\s+/g, "-").toLowerCase()}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Could not export this list");
+    }
+  };
+
+  const handleMove = async (stock, listName) => {
+    try {
+      await updateWatchlistItem(stock._id, { listName });
+      setWatchlist((watchlist || []).map((item) => (item._id === stock._id ? { ...item, listName } : item)));
+      loadBoards();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not move that stock");
+    }
+  };
+
+  const handleAddTag = async (stock, rawTag) => {
+    const tag = rawTag.trim();
+    if (!tag) return;
+    const tags = Array.from(new Set([...(stock.tags || []), tag])).slice(0, 8);
+    try {
+      await updateWatchlistItem(stock._id, { tags });
+      setWatchlist((watchlist || []).map((item) => (item._id === stock._id ? { ...item, tags } : item)));
+    } catch {
+      toast.error("Could not save that tag");
+    }
+  };
+
+  const handleRemoveTag = async (stock, tag) => {
+    const tags = (stock.tags || []).filter((item) => item !== tag);
+    try {
+      await updateWatchlistItem(stock._id, { tags });
+      setWatchlist((watchlist || []).map((item) => (item._id === stock._id ? { ...item, tags } : item)));
+    } catch {
+      toast.error("Could not remove that tag");
+    }
+  };
 
   const positiveCount = (watchlist || []).filter((s) => s.positive).length;
   const negativeCount = (watchlist || []).length - positiveCount;
@@ -272,14 +386,54 @@ function WatchlistPage() {
         {/* Portfolio Health Diagnostic Widget */}
         <PortfolioDiagnosticWidget watchlist={watchlist} />
 
-        {/* Watchlist Table */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {boards.map((board) => (
+              <button
+                key={board.name}
+                type="button"
+                onClick={() => setActiveList(board.name)}
+                className={`h-10 px-3 rounded-xl border text-xs font-bold whitespace-nowrap ${
+                  activeList === board.name
+                    ? "bg-emerald-500 text-black border-emerald-400"
+                    : "bg-[#0e1626] text-gray-300 border-white/10"
+                }`}
+              >
+                {board.name}
+                <span className="ml-1.5 font-mono">{board.count || 0}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <form onSubmit={handleCreateList} className="flex items-center gap-2">
+              <input
+                value={newListName}
+                onChange={(event) => setNewListName(event.target.value)}
+                placeholder="New list name"
+                className="h-10 w-40 rounded-xl bg-[#0e1626] border border-white/10 px-3 text-xs text-white outline-none"
+              />
+              <button type="submit" className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white inline-flex items-center gap-1">
+                <FolderPlus size={14} /> Add
+              </button>
+            </form>
+            <button type="button" onClick={handleExport} className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white inline-flex items-center gap-1">
+              <Download size={14} /> CSV
+            </button>
+            {activeList !== "My Watchlist" && (
+              <button type="button" onClick={() => handleDeleteList(activeList)} className="h-10 px-3 rounded-xl text-xs font-bold text-rose-300">
+                Remove list
+              </button>
+            )}
+          </div>
+        </div>
+
         <Card className="p-0 overflow-hidden border border-white/[0.08]">
-          <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white">Tracked Equities</h2>
+          <div className="p-4 border-b border-white/[0.08] flex items-center justify-between gap-3">
+            <h2 className="text-sm font-bold text-white">{activeList}</h2>
             <div className="w-64">
               <input
                 type="text"
-                placeholder="Filter watchlist..."
+                placeholder="Filter this list..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-8 rounded-lg bg-[#080d1a] border border-white/10 px-3 text-xs text-white outline-none focus:border-emerald-500/40"
@@ -293,93 +447,26 @@ function WatchlistPage() {
                 <div key={i} className="h-16 rounded-xl bg-white/5" />
               ))}
             </div>
-          ) : filteredWatchlist.length === 0 ? (
+          ) : boardItems.length === 0 ? (
             <div className="text-center py-16 px-4">
               <Bookmark size={28} className="text-gray-600 mx-auto mb-3" />
-              <p className="text-sm font-bold text-white mb-1">Your watchlist is empty</p>
+              <p className="text-sm font-bold text-white mb-1">{activeList} is empty</p>
               <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
-                Use the search box above to track any Indian NSE stock and monitor real-time prices and PulseScores.
+                Search above to add an NSE stock. Drag the grip to reorder, and tag names such as dividend or breakout.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-white/[0.04]">
-              {filteredWatchlist.map((stock) => {
-                const sym = cleanSymbol(stock.symbol);
-                return (
-                  <div
-                    key={stock._id}
-                    onClick={() => navigate(`/stock/${sym}`)}
-                    className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors cursor-pointer group"
-                  >
-                    {/* Left: Symbol & Name with Logo & PulseScore */}
-                    <div className="flex items-center gap-3.5 min-w-0 md:w-2/5">
-                      <CompanyLogo symbol={sym} companyName={stock.name} size={40} />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">
-                            {sym}
-                          </span>
-                          <span className="text-[10px] font-semibold text-gray-500 bg-white/5 px-1.5 py-0.2 rounded">
-                            NSE
-                          </span>
-                          {stock.pulseScore && (
-                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono inline-flex items-center gap-1">
-                              <Zap size={10} /> {stock.pulseScore.score} · {stock.pulseScore.grade}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-400 truncate mt-0.5">{stock.name}</p>
-                      </div>
-                    </div>
-
-                    {/* Middle: Sparkline */}
-                    <div className="w-24 h-8 shrink-0 hidden lg:block">
-                      <Sparklines data={stock.data || [20, 25, 22, 30, 28, 35]} margin={2}>
-                        <SparklinesLine
-                          color={stock.positive ? "#10b981" : "#f43f5e"}
-                          style={{ fill: "none", strokeWidth: 2 }}
-                        />
-                      </Sparklines>
-                    </div>
-
-                    {/* Right: Price, % Change & Actions */}
-                    <div className="flex items-center justify-between md:justify-end gap-5">
-                      <div className="text-right">
-                        <p className="text-base font-extrabold text-white font-mono tabular-nums">{stock.price || "—"}</p>
-                        <p
-                          className={`text-xs font-bold font-mono tabular-nums inline-flex items-center gap-0.5 mt-0.5 ${
-                            stock.positive ? "text-emerald-400" : "text-rose-400"
-                          }`}
-                        >
-                          {stock.positive ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-                          {stock.change || "0.00%"}
-                        </p>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => handleOpenAlert(e, stock)}
-                          className="h-9 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-bold flex items-center gap-1.5 transition-all border border-amber-500/20"
-                          title="Set Price Alert"
-                        >
-                          <Bell size={13} />
-                          <span className="hidden sm:inline">Set Alert</span>
-                        </button>
-
-                        <button
-                          onClick={(e) => handleRemove(e, stock._id, stock.symbol)}
-                          className="w-9 h-9 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 flex items-center justify-center transition-all"
-                          title="Remove from Watchlist"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <SortableWatchlist
+              items={boardItems}
+              boards={boards}
+              onReorder={handleReorder}
+              onOpen={(sym) => navigate(`/stock/${sym}`)}
+              onAlert={handleOpenAlert}
+              onRemove={handleRemove}
+              onMove={handleMove}
+              onAddTag={handleAddTag}
+              onRemoveTag={handleRemoveTag}
+            />
           )}
         </Card>
       </div>

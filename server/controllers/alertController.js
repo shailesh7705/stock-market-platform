@@ -105,6 +105,43 @@ const deleteAlert = async (req, res) => {
   }
 };
 
+/* ── Update target or re-arm ────────────────────────────────────────────────── */
+const updateAlert = async (req, res) => {
+  try {
+    const alert = await Alert.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
+
+    if (!alert) {
+      return res.status(404).json({ message: "Alert not found" });
+    }
+
+    if (req.body.targetPrice !== undefined) {
+      const numericTarget = parseFloat(req.body.targetPrice);
+      if (isNaN(numericTarget) || numericTarget <= 0) {
+        return res.status(400).json({ message: "Target price must be a positive number" });
+      }
+      alert.targetPrice = numericTarget;
+    }
+
+    if (req.body.rearm) {
+      alert.triggered = false;
+      alert.triggeredAt = null;
+      alert.triggeredPrice = null;
+      alert.active = true;
+      const price = await fetchCurrentPrice(alert.symbol);
+      if (price) alert.initialPrice = price;
+    }
+
+    await alert.save();
+    res.status(200).json(alert);
+  } catch (error) {
+    console.error("[Alert] Update error:", error.message);
+    res.status(500).json({ message: "Failed to update alert" });
+  }
+};
+
 /* ── Toggle / Re-arm Alert ──────────────────────────────────────────────────── */
 const toggleAlert = async (req, res) => {
   try {
@@ -189,6 +226,7 @@ module.exports = {
   createAlert,
   getAlerts,
   deleteAlert,
+  updateAlert,
   toggleAlert,
   sendTestAlert,
 };

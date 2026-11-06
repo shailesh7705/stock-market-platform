@@ -17,6 +17,8 @@ import {
   Compass,
   ChevronDown,
   Sparkles,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
@@ -24,11 +26,14 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import StockSearch from "../search/StockSearch";
 import MarketStatusPill from "../common/MarketStatusPill";
 import { getMarketIndices } from "../../services/marketService";
-import { getNotifications, markAllRead } from "../../services/notificationService";
+import { markAllRead } from "../../services/notificationService";
+import { updateAlertSound } from "../../services/authService";
 import useAlertStore from "../../store/alertStore";
 import useAuthStore from "../../store/authStore";
 import useWatchlistStore from "../../store/watchlistStore";
 import useNotificationStore from "../../store/notificationStore";
+import NotificationCard from "../notifications/NotificationCard";
+import { alertSoundEnabled, playAlertChime, setAlertSoundEnabled } from "../../utils/alertChime";
 
 function cleanName(name = "") {
   return name.replace(/\.\s*[A-Z]$/, "").trim();
@@ -47,6 +52,8 @@ export default function TopNavbar({ onOpenMobileMenu }) {
   const [marketData, setMarketData] = useState([]);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [expandedNoteId, setExpandedNoteId] = useState(null);
+  const [soundOn, setSoundOn] = useState(alertSoundEnabled);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const location = useLocation();
@@ -54,8 +61,8 @@ export default function TopNavbar({ onOpenMobileMenu }) {
 
   const { alerts } = useAlertStore();
   const { watchlist } = useWatchlistStore();
-  const { user } = useAuthStore();
-  const { notifications, setNotifications } = useNotificationStore();
+  const { user, patchUser } = useAuthStore();
+  const { notifications, setNotifications, liveConnected } = useNotificationStore();
 
   const profileRef = useRef(null);
   const notifRef = useRef(null);
@@ -80,30 +87,23 @@ export default function TopNavbar({ onOpenMobileMenu }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Fetch market indices
   useEffect(() => {
+    const onIndices = (event) => {
+      if (Array.isArray(event.detail) && event.detail.length > 0) {
+        setMarketData(event.detail);
+      }
+    };
+    window.addEventListener("stockpulse:indices", onIndices);
+    return () => window.removeEventListener("stockpulse:indices", onIndices);
+  }, []);
+
+  // Poll indices only while the live stream is down.
+  useEffect(() => {
+    if (liveConnected) return undefined;
     fetchMarketData();
     const interval = setInterval(fetchMarketData, 20000);
     return () => clearInterval(interval);
-  }, []);
-
-  // Fetch notifications
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    fetchNotes();
-    const interval = setInterval(fetchNotes, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchNotes = async () => {
-    try {
-      const data = await getNotifications();
-      if (Array.isArray(data)) setNotifications(data);
-    } catch {
-      // Ignore background error
-    }
-  };
+  }, [liveConnected]);
 
   const fetchMarketData = async () => {
     try {
@@ -123,6 +123,19 @@ export default function TopNavbar({ onOpenMobileMenu }) {
       setNotifications(updated);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleToggleSound = async () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    setAlertSoundEnabled(next);
+    patchUser({ alertSound: next });
+    if (next) playAlertChime();
+    try {
+      await updateAlertSound(next);
+    } catch {
+      // The local toggle still applies on this browser.
     }
   };
 
@@ -390,38 +403,22 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                     )}
                   </div>
 
-                  <div className="max-h-80 overflow-y-auto divide-y divide-white/[0.04]">
+                  <div className="max-h-[28rem] overflow-y-auto divide-y divide-white/[0.04]">
                     {!notifications || notifications.length === 0 ? (
                       <div className="p-6 text-center text-xs text-gray-500">
                         No notifications yet. Price alerts will trigger here automatically.
                       </div>
                     ) : (
                       notifications.slice(0, 10).map((note) => (
-                        <div
+                        <NotificationCard
                           key={note._id}
-                          className={`p-3.5 transition-colors ${
-                            note.read ? "bg-transparent opacity-75" : "bg-emerald-500/[0.06]"
-                          }`}
-                        >
-                          <div className="flex items-start gap-2.5">
-                            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                              <Bell size={13} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[12px] font-semibold text-white leading-snug">
-                                {note.message}
-                              </p>
-                              <p className="text-[10px] text-gray-500 mt-1">
-                                {new Date(note.createdAt).toLocaleTimeString("en-IN", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  day: "numeric",
-                                  month: "short",
-                                })}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+                          note={note}
+                          expanded={expandedNoteId === note._id}
+                          onToggle={() =>
+                            setExpandedNoteId((current) => (current === note._id ? null : note._id))
+                          }
+                          onClose={() => setShowNotifications(false)}
+                        />
                       ))
                     )}
                   </div>
@@ -523,6 +520,14 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                     >
                       <Bell size={14} className="text-amber-400" />
                       <span>Price Alerts</span>
+                    </button>
+
+                    <button
+                      onClick={handleToggleSound}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                    >
+                      {soundOn ? <Volume2 size={14} className="text-emerald-400" /> : <VolumeX size={14} className="text-gray-500" />}
+                      <span>{soundOn ? "Alert chime on" : "Alert chime off"}</span>
                     </button>
                   </div>
 

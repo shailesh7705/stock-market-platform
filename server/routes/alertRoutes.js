@@ -4,6 +4,7 @@ const {
   createAlert,
   getAlerts,
   deleteAlert,
+  updateAlert,
   toggleAlert,
   sendTestAlert,
 } = require("../controllers/alertController");
@@ -15,6 +16,7 @@ router.use(protect);
 
 router.post("/", createAlert);
 router.get("/", getAlerts);
+router.patch("/:id", updateAlert);
 router.delete("/:id", deleteAlert);
 router.patch("/:id/toggle", toggleAlert);
 router.post("/test", sendTestAlert);

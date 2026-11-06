@@ -3,6 +3,7 @@ import { create } from "zustand";
 const useNotificationStore = create((set) => ({
 
   notifications: [],
+  liveConnected: false,
 
   setNotifications: (notifications) =>
 
@@ -10,19 +11,18 @@ const useNotificationStore = create((set) => ({
       notifications
     }),
 
+  setLiveConnected: (liveConnected) => set({ liveConnected }),
+
   addNotification: (notification) =>
 
-    set((state) => ({
-
-      notifications: [
-
-        notification,
-
-        ...state.notifications
-
-      ]
-
-    }))
+    set((state) => {
+      if (state.notifications.some((item) => item._id === notification._id)) {
+        return state;
+      }
+      return {
+        notifications: [notification, ...state.notifications],
+      };
+    })
 
 }));
 

@@ -122,8 +122,13 @@ function AlertsPanel() {
 
   useEffect(() => {
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 15000);
-    return () => clearInterval(interval);
+    const onAlert = () => fetchAlerts();
+    window.addEventListener("stockpulse:alert", onAlert);
+    const interval = setInterval(fetchAlerts, 60000);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("stockpulse:alert", onAlert);
+    };
   }, []);
 
   const fetchAlerts = async () => {

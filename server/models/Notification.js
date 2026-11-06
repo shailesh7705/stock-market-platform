@@ -16,6 +16,37 @@ const notificationSchema = new mongoose.Schema({
   read: {
     type: Boolean,
     default: false
+  },
+
+  kind: {
+    type: String,
+    default: "info"
+  },
+
+  symbol: {
+    type: String,
+    default: ""
+  },
+
+  alert: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Alert",
+    default: null
+  },
+
+  targetPrice: {
+    type: Number,
+    default: null
+  },
+
+  triggeredPrice: {
+    type: Number,
+    default: null
+  },
+
+  condition: {
+    type: String,
+    default: ""
   }
 
 }, {

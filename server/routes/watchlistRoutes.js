@@ -1,36 +1,29 @@
 const express = require("express");
+const {
+  addToWatchlist,
+  getWatchlist,
+  removeFromWatchlist,
+  getBoards,
+  createBoard,
+  deleteBoard,
+  reorderWatchlist,
+  updateWatchlistItem,
+  exportWatchlist,
+} = require("../controllers/watchlistController");
+const protect = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-const {
+router.use(protect);
 
-  addToWatchlist,
-  getWatchlist,
-  removeFromWatchlist
-
-} = require("../controllers/watchlistController");
-
-const protect = require("../middleware/authMiddleware");
-
-/* Get User Watchlist */
-router.get(
-  "/",
-  protect,
-  getWatchlist
-);
-
-/* Add Stock */
-router.post(
-  "/",
-  protect,
-  addToWatchlist
-);
-
-/* Remove Stock */
-router.delete(
-  "/:id",
-  protect,
-  removeFromWatchlist
-);
+router.get("/boards", getBoards);
+router.post("/boards", createBoard);
+router.delete("/boards/:name", deleteBoard);
+router.patch("/reorder", reorderWatchlist);
+router.get("/export", exportWatchlist);
+router.get("/", getWatchlist);
+router.post("/", addToWatchlist);
+router.patch("/:id", updateWatchlistItem);
+router.delete("/:id", removeFromWatchlist);
 
 module.exports = router;

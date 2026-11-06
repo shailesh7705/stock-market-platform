@@ -67,6 +67,18 @@ const useAuthStore = create((set) => ({
 
   },
 
+  patchUser: (partial) =>
+
+    set((state) => {
+
+      const user = { ...(state.user || {}), ...partial };
+
+      localStorage.setItem("user", JSON.stringify(user));
+
+      return { user };
+
+    }),
+
   logout: () => {
 
     localStorage.removeItem("user");

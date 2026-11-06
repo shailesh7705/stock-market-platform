@@ -216,6 +216,29 @@ function createGmailTransport(port = 465, secure = true) {
   });
 }
 
+const buildResetHtml = (resetUrl) => `
+<!DOCTYPE html>
+<html lang="en">
+<body style="margin:0;padding:0;background:#080d1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#080d1a;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:540px;background:#0e1626;border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:32px;">
+        <tr><td>
+          <p style="margin:0 0 12px;color:#fbbf24;font-size:12px;font-weight:800;letter-spacing:0.8px;">STOCKPULSE</p>
+          <h1 style="margin:0 0 12px;color:#fff;font-size:22px;">Reset your password</h1>
+          <p style="margin:0 0 24px;color:#94a3b8;font-size:14px;line-height:1.6;">
+            This link expires in 20 minutes and can be used once. If you did not ask for a reset, you can ignore this email.
+          </p>
+          <a href="${resetUrl}" style="display:inline-block;background:#10b981;color:#041a10;font-size:13px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:12px;">
+            Choose a new password
+          </a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
 /**
  * Unified sendEmail helper.
  * Dual-port fallback: Tries port 465 (SSL) first, and falls back to port 587 (STARTTLS).
@@ -232,14 +255,20 @@ const sendEmail = async (param1, param2, param3) => {
     if (typeof param1 === "object" && param1 !== null) {
       const opts = param1;
       to = opts.to;
-      const clean = cleanSymbol(opts.symbol);
-      subject = opts.isTest
-        ? `⚡ StockPulse Test Alert: ${clean}`
-        : `🚀 Alert Triggered: ${clean} reached ₹${formatPrice(opts.targetPrice)}`;
-      text = opts.isTest
-        ? `StockPulse Test Alert for ${clean}`
-        : `${clean} has reached your target price of ₹${formatPrice(opts.targetPrice)} (Current: ₹${formatPrice(opts.currentPrice)})`;
-      html = buildHtml(opts);
+      if (opts.kind === "reset") {
+        subject = "Reset your StockPulse password";
+        text = `Reset your StockPulse password: ${opts.resetUrl}. This link expires in 20 minutes.`;
+        html = buildResetHtml(opts.resetUrl);
+      } else {
+        const clean = cleanSymbol(opts.symbol);
+        subject = opts.isTest
+          ? `⚡ StockPulse Test Alert: ${clean}`
+          : `🚀 Alert Triggered: ${clean} reached ₹${formatPrice(opts.targetPrice)}`;
+        text = opts.isTest
+          ? `StockPulse Test Alert for ${clean}`
+          : `${clean} has reached your target price of ₹${formatPrice(opts.targetPrice)} (Current: ₹${formatPrice(opts.currentPrice)})`;
+        html = buildHtml(opts);
+      }
     } else {
       to = param1;
       subject = param2;

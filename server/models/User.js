@@ -16,6 +16,31 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true
+  },
+
+  alertSound: {
+    type: Boolean,
+    default: true
+  },
+
+  passwordResetHash: {
+    type: String,
+    default: null
+  },
+
+  passwordResetExpires: {
+    type: Date,
+    default: null
+  },
+
+  watchlistBoards: {
+    type: [
+      {
+        name: { type: String, required: true },
+        position: { type: Number, default: 0 },
+      },
+    ],
+    default: undefined,
   }
 
 }, {

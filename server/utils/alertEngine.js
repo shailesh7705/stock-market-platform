@@ -7,6 +7,7 @@ const Alert = require("../models/Alert");
 const Notification = require("../models/Notification");
 const User = require("../models/User");
 const sendEmail = require("./sendEmail");
+const { publishToUser } = require("./alertBus");
 
 const YF_OPTS = { validateResult: false };
 
@@ -106,10 +107,20 @@ const checkAlerts = async () => {
 
           console.log(`[AlertEngine] 🎯 TRIGGERED: ${symbol} hit ₹${target} (Current: ₹${currentPrice})`);
 
-          // 1. Create In-App Notification
-          await Notification.create({
+          const note = await Notification.create({
             user: alert.user,
+            kind: "alert",
+            symbol,
+            alert: alert._id,
+            targetPrice: target,
+            triggeredPrice: currentPrice,
+            condition,
             message: `${symbol} reached target price of ₹${target} (Current: ₹${currentPrice.toFixed(2)})`,
+          });
+
+          publishToUser(String(alert.user), {
+            type: "alert",
+            notification: note,
           });
 
           // 2. Send Rich HTML Email
