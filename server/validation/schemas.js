@@ -109,7 +109,32 @@ const auth = {
       password,
     }),
   },
-  preferences: { body: z.object({ alertSound: z.boolean("alertSound must be true or false") }) },
+  preferences: { body: z.object({ alertSound: z.boolean().optional(), themePreference: z.enum(["system", "dark", "light"]).optional() }) },
+  changePassword: {
+    body: z.object({
+      currentPassword: z.string("Current password is required").min(1),
+      newPassword: z.string("New password is required").min(8, "Password must be at least 8 characters"),
+    }),
+  },
+  updateSettings: {
+    body: z.object({
+      name: z.string().trim().min(1).max(60).optional(),
+      alertSound: z.boolean().optional(),
+      emailNotificationsEnabled: z.boolean().optional(),
+      alertDigestFrequency: z.enum(["instant", "daily", "off"]).optional(),
+      themePreference: z.enum(["system", "dark", "light"]).optional(),
+    }),
+  },
+  verifyEmail: {
+    body: z.object({
+      token: z.string("Verification token is required").min(1).max(512),
+    }),
+  },
+  deleteAccount: {
+    body: z.object({
+      password: z.string("Password is required").min(1),
+    }),
+  },
 };
 
 const alerts = {

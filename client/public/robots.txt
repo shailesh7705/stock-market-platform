@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /stock/
+Allow: /markets
+Allow: /terms
+Allow: /privacy
+Allow: /disclaimer
+Disallow: /portfolio
+Disallow: /alerts
+Disallow: /settings
+Disallow: /api/
+
+Sitemap: https://stockpulse-mu-three.vercel.app/sitemap.xml

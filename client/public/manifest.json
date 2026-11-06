@@ -1,17 +1,19 @@
 {
   "short_name": "StockPulse",
-  "name": "StockPulse Institutional Market Terminal",
-  "description": "NSE Realtime Market Intelligence, 100-Point PulseScore, and Multi-Year Compounding Forecasts",
-  "start_url": "/dashboard",
+  "name": "StockPulse Equity Research & Market Terminal",
+  "description": "Realtime NSE India stock intelligence, 100-point PulseScore, technical screeners, and multi-year forecasting.",
+  "start_url": "/",
   "background_color": "#080b11",
-  "theme_color": "#f59e0b",
+  "theme_color": "#080b11",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "categories": ["finance", "productivity", "utilities"],
   "icons": [
     {
       "src": "/favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "type": "image/x-icon",
+      "purpose": "any"
     }
   ]
 }

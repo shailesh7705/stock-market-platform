@@ -4,6 +4,10 @@ import AppLayout from "../components/layout/AppLayout";
 import CompanyLogo from "../components/ui/CompanyLogo";
 import CuratedScreenersBar, { filterByPreset } from "../components/stocks/CuratedScreenersBar";
 import { getCuratedScreeners } from "../services/stockService";
+import SEO from "../components/common/SEO";
+import Disclaimer from "../components/common/Disclaimer";
+import Skeleton from "../components/ui/Skeleton";
+import EmptyState from "../components/ui/EmptyState";
 
 export default function MarketsPage() {
   const [params, setParams] = useSearchParams();
@@ -38,6 +42,11 @@ export default function MarketsPage() {
 
   return (
     <AppLayout>
+      <SEO
+        title="NSE Stock Screeners & Market Discovery | StockPulse"
+        description="Curated equity screeners for NSE stocks: High ROE compounders, Coffee Can portfolio candidates, undervalued value picks, and dividend stars."
+        canonicalUrl="https://stockpulse.in/markets"
+      />
       <div className="space-y-5 pb-10">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-400">Discovery</p>
@@ -48,7 +57,10 @@ export default function MarketsPage() {
         <CuratedScreenersBar stocks={stocks} active={preset} onChange={choosePreset} />
 
         {loading ? (
-          <p className="text-sm text-gray-400">Scoring the NSE universe…</p>
+          <div className="space-y-3">
+            <Skeleton variant="card" height="56px" />
+            <Skeleton variant="card" height="240px" />
+          </div>
         ) : error ? (
           <p className="text-sm text-rose-300">{error}</p>
         ) : (
@@ -94,6 +106,7 @@ export default function MarketsPage() {
             </table>
           </div>
         )}
+        <Disclaimer variant="full" className="mt-8" />
       </div>
     </AppLayout>
   );

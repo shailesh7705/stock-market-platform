@@ -1,5 +1,5 @@
 // client/src/App.jsx
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotificationListener from "./components/notifications/NotificationListener";
@@ -15,6 +15,11 @@ const WatchlistPage = lazy(() => import("./pages/WatchlistPage"));
 const AlertsPage = lazy(() => import("./pages/AlertsPage"));
 const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
 const MarketsPage = lazy(() => import("./pages/MarketsPage"));
+const Settings = lazy(() => import("./pages/Settings"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const TermsPage = lazy(() => import("./pages/legal/TermsPage"));
+const PrivacyPage = lazy(() => import("./pages/legal/PrivacyPage"));
+const DisclaimerPage = lazy(() => import("./pages/legal/DisclaimerPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageFallback() {
@@ -30,20 +35,56 @@ function PageFallback() {
   );
 }
 
+function OfflineBanner() {
+  const [isOffline, setIsOffline] = useState(
+    typeof navigator !== "undefined" ? !navigator.onLine : false
+  );
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  if (!isOffline) return null;
+
+  return (
+    <div className="bg-amber-500 text-black text-xs font-extrabold py-2 px-4 text-center sticky top-0 z-50 shadow-md">
+      You are currently browsing offline. Displaying cached data. Reconnecting when connection resumes.
+    </div>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <OfflineBanner />
       <NotificationListener />
       <Suspense fallback={<PageFallback />}>
         <Routes>
-          {/* Public Routes */}
+          {/* Public Marketing & Authentication */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/verify-email/:token" element={<VerifyEmail />} />
 
-          {/* Protected Dashboard & Trading Routes */}
+          {/* Public Research & Equity Discovery (SP-34 SEO / Unlocked) */}
+          <Route path="/markets" element={<MarketsPage />} />
+          <Route path="/stock/:symbol" element={<StockDetailsPage />} />
+
+          {/* Compliance & Legal Documentation (SP-31) */}
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/disclaimer" element={<DisclaimerPage />} />
+
+          {/* Protected User Dashboard & Portfolio Suite */}
           <Route
             path="/dashboard"
             element={
@@ -81,24 +122,15 @@ function App() {
           />
 
           <Route
-            path="/markets"
+            path="/settings"
             element={
               <ProtectedRoute>
-                <MarketsPage />
+                <Settings />
               </ProtectedRoute>
             }
           />
 
-          <Route
-            path="/stock/:symbol"
-            element={
-              <ProtectedRoute>
-                <StockDetailsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Fallback */}
+          {/* Fallback 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
