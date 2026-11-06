@@ -9,16 +9,19 @@ const {
   sendTestAlert,
 } = require("../controllers/alertController");
 const protect = require("../middleware/authMiddleware");
+const { testEmailLimiter } = require("../middleware/rateLimiters");
+const validate = require("../middleware/validate");
+const { alerts } = require("../validation/schemas");
 
 const router = express.Router();
 
 router.use(protect);
 
-router.post("/", createAlert);
+router.post("/", validate(alerts.create), createAlert);
 router.get("/", getAlerts);
-router.patch("/:id", updateAlert);
-router.delete("/:id", deleteAlert);
-router.patch("/:id/toggle", toggleAlert);
-router.post("/test", sendTestAlert);
+router.post("/test", testEmailLimiter, validate(alerts.test), sendTestAlert);
+router.patch("/:id", validate(alerts.update), updateAlert);
+router.delete("/:id", validate(alerts.byId), deleteAlert);
+router.patch("/:id/toggle", validate(alerts.byId), toggleAlert);
 
 module.exports = router;

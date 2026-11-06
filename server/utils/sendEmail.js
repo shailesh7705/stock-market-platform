@@ -1,8 +1,11 @@
 // server/utils/sendEmail.js
 const nodemailer = require("nodemailer");
 
+const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
+
 const cleanSymbol = (symbol = "") =>
-  symbol.replace(".NS", "").replace(".BO", "").toUpperCase();
+  String(symbol).replace(".NS", "").replace(".BO", "").toUpperCase();
 
 const formatPrice = (price) => {
   if (price === undefined || price === null || isNaN(price)) return "—";
@@ -34,10 +37,13 @@ const parseAlertText = (text = "") => {
 };
 
 const buildHtml = ({ symbol, targetPrice, currentPrice, condition = "above", isTest = false }) => {
-  const cleaned = cleanSymbol(symbol);
+  const rawSymbol = cleanSymbol(symbol);
+  const cleaned = escapeHtml(rawSymbol);
   const timestamp = getTimestamp();
-  const frontendUrl = (process.env.FRONTEND_URL || "https://stockpulse-mu-three.vercel.app").replace(/\/+$/, "");
-  const stockUrl = `${frontendUrl}/stock/${cleaned}`;
+  const frontendUrl = escapeHtml(
+    (process.env.FRONTEND_URL || "https://stockpulse-mu-three.vercel.app").replace(/\/+$/, "")
+  );
+  const stockUrl = `${frontendUrl}/stock/${encodeURIComponent(rawSymbol)}`;
   const isAbove = condition === "above";
 
   return `
@@ -210,9 +216,6 @@ function createGmailTransport(port = 465, secure = true) {
     connectionTimeout: 8000,
     greetingTimeout: 8000,
     socketTimeout: 12000,
-    tls: {
-      rejectUnauthorized: false,
-    },
   });
 }
 
@@ -229,7 +232,7 @@ const buildResetHtml = (resetUrl) => `
           <p style="margin:0 0 24px;color:#94a3b8;font-size:14px;line-height:1.6;">
             This link expires in 20 minutes and can be used once. If you did not ask for a reset, you can ignore this email.
           </p>
-          <a href="${resetUrl}" style="display:inline-block;background:#10b981;color:#041a10;font-size:13px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:12px;">
+          <a href="${escapeHtml(resetUrl)}" style="display:inline-block;background:#10b981;color:#041a10;font-size:13px;font-weight:800;text-decoration:none;padding:12px 24px;border-radius:12px;">
             Choose a new password
           </a>
         </td></tr>

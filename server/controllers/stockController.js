@@ -693,7 +693,7 @@ const getStockDetails = async (req, res) => {
     return res.json(details);
   } catch (error) {
     console.error("[StockDetails] Error:", error.message);
-    return res.status(500).json({ message: "Failed to fetch stock details", error: error.message });
+    return res.status(500).json({ message: "Failed to fetch stock details" });
   }
 };
 
@@ -719,7 +719,7 @@ const getBatchStockDetails = async (req, res) => {
     return res.json(data);
   } catch (error) {
     console.error("[BatchStockDetails] Error:", error.message);
-    return res.status(500).json({ message: "Failed to fetch batch stock details", error: error.message });
+    return res.status(500).json({ message: "Failed to fetch batch stock details" });
   }
 };
 
