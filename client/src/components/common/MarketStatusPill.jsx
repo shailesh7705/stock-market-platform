@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { getMarketStatus } from "../../utils/marketHours";
+import { applyHolidayCalendar, getMarketStatus } from "../../utils/marketHours";
+import { getMarketCalendar } from "../../services/marketService";
 
 const TONE = {
   open: "border-emerald-400/40 bg-emerald-500/10 text-emerald-300 shadow-emerald-500/20",
@@ -19,8 +20,20 @@ export default function MarketStatusPill() {
   const [status, setStatus] = useState(() => getMarketStatus());
 
   useEffect(() => {
+    let active = true;
+    getMarketCalendar()
+      .then((calendar) => {
+        if (!active) return;
+        applyHolidayCalendar(calendar?.holidays);
+        setStatus(getMarketStatus());
+      })
+      .catch(() => {});
+
     const timer = setInterval(() => setStatus(getMarketStatus()), 30000);
-    return () => clearInterval(timer);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, []);
 
   return (

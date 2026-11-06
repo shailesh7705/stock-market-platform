@@ -1,3 +1,4 @@
+// Fallback until the server calendar (/api/market/calendar) loads.
 const NSE_HOLIDAYS = new Set([
   "2026-01-26",
   "2026-03-03",
@@ -15,6 +16,13 @@ const NSE_HOLIDAYS = new Set([
   "2026-11-24",
   "2026-12-25",
 ]);
+
+export function applyHolidayCalendar(holidays) {
+  if (!Array.isArray(holidays)) return;
+  for (const date of holidays) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) NSE_HOLIDAYS.add(date);
+  }
+}
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const OPEN_MINUTES = 9 * 60 + 15;

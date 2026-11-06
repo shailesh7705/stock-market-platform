@@ -53,6 +53,11 @@ const notificationSchema = new mongoose.Schema({
   timestamps: true
 });
 
+const RETENTION_SECONDS = 90 * 24 * 60 * 60;
+
+notificationSchema.index({ user: 1, createdAt: -1 });
+notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: RETENTION_SECONDS });
+
 const Notification = mongoose.model(
   "Notification",
   notificationSchema

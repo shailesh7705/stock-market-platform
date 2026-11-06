@@ -13,6 +13,18 @@ export const getMarketIndices = async () => {
   }
 };
 
+/* NSE holiday calendar */
+let calendarRequest = null;
+export const getMarketCalendar = () => {
+  calendarRequest ??= API.get("/market/calendar")
+    .then((response) => response.data)
+    .catch((error) => {
+      calendarRequest = null;
+      throw error;
+    });
+  return calendarRequest;
+};
+
 /* Market Movers */
 export const getMarketMovers = async () => {
   try {

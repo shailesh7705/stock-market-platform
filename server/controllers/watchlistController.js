@@ -69,7 +69,7 @@ const addToWatchlist = async (req, res) => {
     });
 
     if (existing) {
-      return res.status(400).json({ message: "Stock is already in this list" });
+      return res.status(409).json({ message: "Stock is already in this list" });
     }
 
     const last = await Watchlist.findOne({ user: req.user._id, listName: boardName }).sort({ position: -1 });
@@ -107,6 +107,9 @@ const addToWatchlist = async (req, res) => {
       position: item.position,
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "Stock is already in this list" });
+    }
     console.error("[Watchlist] Add error:", error.message);
     res.status(500).json({ message: "Failed to add to watchlist" });
   }
@@ -306,7 +309,7 @@ const updateWatchlistItem = async (req, res) => {
         _id: { $ne: item._id },
       });
       if (duplicate) {
-        return res.status(400).json({ message: "Stock is already in this list" });
+        return res.status(409).json({ message: "Stock is already in this list" });
       }
       item.listName = nextList;
     }

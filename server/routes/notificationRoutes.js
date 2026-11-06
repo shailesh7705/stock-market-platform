@@ -14,7 +14,7 @@ const router = express.Router();
 
 router.use(protect);
 
-router.get("/", getNotifications);
+router.get("/", validate(notifications.list), getNotifications);
 router.put("/read-all", markAllRead);
 router.delete("/clear-all", clearAllNotifications);
 router.delete("/:id", validate(notifications.byId), deleteNotification);

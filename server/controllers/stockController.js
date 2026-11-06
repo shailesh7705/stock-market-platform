@@ -11,6 +11,7 @@ const {
 const { calculateForecast } = require("../utils/forecastEngine");
 const { SCREENER_UNIVERSE, findPeerGroup } = require("../data/peerGroups");
 const { toPercent, debtToEquityRatio, sma, rsi, cagr, mapPool } = require("../utils/marketMath");
+const { getMarketSession } = require("../utils/marketHours");
 
 const YF_OPTS = { validateResult: false };
 const { getCache, setCache } = require("../utils/memoryCache");
@@ -92,31 +93,23 @@ function formatIndianMarketCap(val) {
 }
 
 // ─── Indian Market Trading Session Helper ────────────────────────────────────
+const SESSION_LABELS = {
+  open: "Regular Trading Session",
+  pre: "Pre-Market",
+  post: "Post-Market",
+  closed: "Market Closed",
+};
+
 function getIndianMarketSession() {
   const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const ist = new Date(utc + 3600000 * 5.5);
-  const hours = ist.getHours();
-  const minutes = ist.getMinutes();
-  const day = ist.getDay();
-
-  const isWeekday = day >= 1 && day <= 5;
-  const totalMinutes = hours * 60 + minutes;
-  const marketOpenMinutes = 9 * 60 + 15; // 09:15 AM IST
-  const marketCloseMinutes = 15 * 60 + 30; // 03:30 PM IST
-
-  const isOpen = isWeekday && totalMinutes >= marketOpenMinutes && totalMinutes <= marketCloseMinutes;
-
+  const session = getMarketSession(now);
   return {
-    isOpen,
-    session: isOpen
-      ? "Regular Trading Session"
-      : totalMinutes < marketOpenMinutes && isWeekday
-      ? "Pre-Market"
-      : "Market Closed",
+    isOpen: session.isOpen,
+    session: session.holiday ? "Market Holiday" : SESSION_LABELS[session.phase],
     timezone: "IST (UTC+5:30)",
     exchange: "NSE",
-    serverTime: ist.toISOString(),
+    serverTime: now.toISOString(),
+    istTime: now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
   };
 }
 

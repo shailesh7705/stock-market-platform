@@ -16,6 +16,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const newsRoutes = require("./routes/newsRoutes");
 const portfolioRoutes = require("./routes/portfolioRoutes");
 const streamRoutes = require("./routes/streamRoutes");
+const marketRoutes = require("./routes/marketRoutes");
 const { apiLimiter } = require("./middleware/rateLimiters");
 const startAlertEngine = require("./utils/alertEngine");
 const { startLiveHub } = require("./utils/liveHub");
@@ -78,6 +79,7 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["X-Next-Cursor"],
   })
 );
 
@@ -110,8 +112,7 @@ app.use((req, res, next) => {
 });
 
 // ─── DB + Services ────────────────────────────────────────────────────────────
-connectDB();
-startAlertEngine();
+connectDB().then(() => startAlertEngine());
 startLiveHub();
 startKeepAlive();
 
@@ -123,6 +124,7 @@ app.use("/api/alerts", alertRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/portfolio", portfolioRoutes);
+app.use("/api/market", marketRoutes);
 
 // Health check & Diagnostic
 app.get(["/", "/api/health"], (req, res) => {

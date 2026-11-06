@@ -78,7 +78,14 @@ const createAlert = async (req, res) => {
 /* ── Get User's Alerts ──────────────────────────────────────────────────────── */
 const getAlerts = async (req, res) => {
   try {
-    const alerts = await Alert.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const { limit, before } = req.query;
+    const filter = { user: req.user._id };
+    if (before) filter.createdAt = { $lt: before };
+
+    const alerts = await Alert.find(filter).sort({ createdAt: -1 }).limit(limit);
+    if (alerts.length === limit) {
+      res.setHeader("X-Next-Cursor", alerts[alerts.length - 1].createdAt.toISOString());
+    }
     res.status(200).json(alerts);
   } catch (error) {
     console.error("[Alert] Get error:", error.message);
