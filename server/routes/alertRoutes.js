@@ -9,6 +9,7 @@ const {
   sendTestAlert,
 } = require("../controllers/alertController");
 const protect = require("../middleware/authMiddleware");
+const { testEmailLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 
@@ -19,6 +20,6 @@ router.get("/", getAlerts);
 router.patch("/:id", updateAlert);
 router.delete("/:id", deleteAlert);
 router.patch("/:id/toggle", toggleAlert);
-router.post("/test", sendTestAlert);
+router.post("/test", testEmailLimiter, sendTestAlert);
 
 module.exports = router;

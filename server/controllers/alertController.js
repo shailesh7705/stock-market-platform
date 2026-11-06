@@ -3,6 +3,7 @@ const Alert = require("../models/Alert");
 const User = require("../models/User");
 const Notification = require("../models/Notification");
 const sendEmail = require("../utils/sendEmail");
+const { normalizeSymbol } = require("../utils/symbols");
 const YahooFinance = require("yahoo-finance2").default;
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
@@ -184,10 +185,20 @@ const sendTestAlert = async (req, res) => {
       return res.status(400).json({ message: "User email not found" });
     }
 
-    const { symbol = "RELIANCE.NS", targetPrice = 1300, condition = "above" } = req.body || {};
+    const body = req.body || {};
+    const symbol = normalizeSymbol(body.symbol ?? "RELIANCE.NS");
+    if (!symbol) {
+      return res.status(400).json({ message: "Enter a valid NSE or BSE symbol, e.g. RELIANCE.NS" });
+    }
+
+    const targetPrice = Number(body.targetPrice ?? 1300);
+    if (!Number.isFinite(targetPrice) || targetPrice <= 0) {
+      return res.status(400).json({ message: "Target price must be a positive number" });
+    }
+
+    const condition = body.condition === "below" ? "below" : "above";
     const currentPrice = (await fetchCurrentPrice(symbol)) || targetPrice;
 
-    // Send the test email
     const emailResult = await sendEmail({
       to: user.email,
       symbol,
@@ -198,27 +209,25 @@ const sendTestAlert = async (req, res) => {
     });
 
     if (emailResult && emailResult.success === false) {
-      return res.status(500).json({
+      console.warn("[Alert] Test email not delivered:", emailResult.error);
+      return res.status(502).json({
         success: false,
-        message: `Could not deliver email: ${emailResult.error || "SMTP connection failed"}`,
+        message: "Could not deliver the test email right now. Please try again later.",
       });
     }
 
-    // Also add an in-app notification
     await Notification.create({
       user: user._id,
-      message: `[Test Alert] Email verification sent to ${user.email} for ${symbol}`,
+      message: `[Test Alert] Verification email sent for ${symbol}`,
     });
 
     res.status(200).json({
       success: true,
-      message: `Test alert email delivered to ${user.email}`,
-      deliveredTo: user.email,
-      port: emailResult?.port,
+      message: "Test alert email sent. Check your inbox.",
     });
   } catch (error) {
     console.error("[Alert] Test email error:", error.message);
-    res.status(500).json({ message: error.message || "Failed to send test email" });
+    res.status(500).json({ message: "Failed to send test email" });
   }
 };
 

@@ -20,7 +20,20 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Keyed by account so one user cannot flood their own inbox from many IPs.
+const testEmailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  keyGenerator: (req) => String(req.user._id),
+  message: {
+    message: "You can send up to 3 test emails per hour. Please try again later.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   authLimiter,
   apiLimiter,
+  testEmailLimiter,
 };
