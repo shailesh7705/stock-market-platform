@@ -29,6 +29,10 @@ import RecentlyViewedCarousel, { saveRecentlyViewedStock } from "../components/s
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
 import useWatchlistStore from "../store/watchlistStore";
 import toast from "react-hot-toast";
+import SEO from "../components/common/SEO";
+import Disclaimer, { DataSourceBadge } from "../components/common/Disclaimer";
+import AuthModal from "../components/auth/AuthModal";
+import useAuthStore from "../store/authStore";
 
 function cleanSymbol(sym = "") {
   return sym.replace(".NS", "").replace(".BO", "").toUpperCase();
@@ -40,6 +44,9 @@ function StockDetailsPage() {
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alertModalOpen, setAlertModalOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalType, setAuthModalType] = useState("signup");
+  const { user } = useAuthStore();
   const [inWatchlist, setInWatchlist] = useState(false);
   const [watchlistId, setWatchlistId] = useState(null);
   const [wlLoading, setWlLoading] = useState(false);
@@ -145,7 +152,21 @@ function StockDetailsPage() {
     };
   }, [symbol]);
 
+  const handleAlertClick = () => {
+    if (!user) {
+      setAuthModalType("signup");
+      setAuthModalOpen(true);
+      return;
+    }
+    setAlertModalOpen(true);
+  };
+
   const handleWatchlistToggle = async () => {
+    if (!user) {
+      setAuthModalType("signup");
+      setAuthModalOpen(true);
+      return;
+    }
     setWlLoading(true);
     try {
       if (inWatchlist && watchlistId) {
@@ -209,6 +230,11 @@ function StockDetailsPage() {
 
   return (
     <AppLayout>
+      <SEO
+        title={`${displaySymbol} Share Price, Financials & Analysis | StockPulse`}
+        description={`Track ${displaySymbol} (${stock?.longName || stock?.shortName || displaySymbol}) share price, valuation metrics, PulseScore, financials and forecast on NSE.`}
+        canonicalUrl={`https://stockpulse.in/stock/${displaySymbol}`}
+      />
       <div className="max-w-7xl mx-auto space-y-6 pb-12">
         {/* Breadcrumb Back Link */}
         <div className="no-print flex items-center justify-between">
@@ -219,9 +245,7 @@ function StockDetailsPage() {
             <ChevronLeft size={16} /> Back to Dashboard
           </Link>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-              Live NSE Market Data
-            </span>
+            <DataSourceBadge asOf={details?.lastUpdated} />
           </div>
         </div>
 
@@ -312,7 +336,7 @@ function StockDetailsPage() {
 
             {/* Set Alert Button */}
             <button
-              onClick={() => setAlertModalOpen(true)}
+              onClick={handleAlertClick}
               className="h-11 px-5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/25"
             >
               <Bell size={16} />
@@ -350,7 +374,7 @@ function StockDetailsPage() {
               </div>
 
               <button
-                onClick={() => setAlertModalOpen(true)}
+                onClick={handleAlertClick}
                 className="h-10 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold shrink-0 transition-all shadow-md shadow-emerald-500/20"
               >
                 Create Alert Now
@@ -375,7 +399,20 @@ function StockDetailsPage() {
         <div className="no-print w-full">
           <CompanyProsCons stock={stock} />
         </div>
+
+        {/* SEBI Compliance Disclosure */}
+        <div className="no-print pt-4">
+          <Disclaimer variant="full" />
+        </div>
       </div>
+
+      {/* Auth Modal for unauthenticated visitors */}
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        type={authModalType}
+        setType={setAuthModalType}
+      />
 
       {/* Alert Modal */}
       <CreateAlertModal

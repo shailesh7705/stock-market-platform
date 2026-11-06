@@ -4,6 +4,7 @@ const helmet = require("helmet");
 const mongoSanitize = require("express-mongo-sanitize");
 const mongoose = require("mongoose");
 const compression = require("compression");
+const cookieParser = require("cookie-parser");
 const crypto = require("crypto");
 const authRoutes = require("./routes/authRoutes");
 const stockRoutes = require("./routes/stockRoutes");
@@ -96,6 +97,21 @@ function createApp() {
     next();
   });
   app.use(mongoSanitize());
+  app.use(cookieParser());
+
+  // CSRF Protection: Validate Origin on state-changing requests when cookie session is present
+  app.use((req, res, next) => {
+    const isStateChange = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
+    const hasAuthCookie = req.cookies && (req.cookies.access_token || req.cookies.refresh_token);
+    if (isStateChange && hasAuthCookie) {
+      const origin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null);
+      if (origin && !isAllowedOrigin(origin)) {
+        console.warn(`[CSRF] Forbidden origin ${origin} for ${req.method} ${req.path}`);
+        return res.status(403).json({ message: "Forbidden: cross-origin request rejected." });
+      }
+    }
+    next();
+  });
   app.use("/api/stream", streamRoutes);
   app.use("/api", apiLimiter);
 

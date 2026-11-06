@@ -1,6 +1,7 @@
 // client/src/components/stocks/StockForecastCard.jsx
 import React, { useState } from "react";
 import Card from "../ui/Card";
+import Disclaimer from "../common/Disclaimer";
 import {
   TrendingUp,
   Target,
@@ -79,7 +80,7 @@ export default function StockForecastCard({ details, livePrice }) {
               <Compass size={18} className="text-white" />
             </span>
             <h3 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
-              Multi-Year Price & Return Forecast
+              Multi-Year Price & Return Projection (Educational)
               <span className="text-[11px] font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-full">
                 1Y · 3Y · 5Y Horizon
               </span>
@@ -344,6 +345,9 @@ export default function StockForecastCard({ details, livePrice }) {
           </div>
         </div>
       </div>
+
+      {/* SEBI Compliance Disclaimer */}
+      <Disclaimer variant="compact" />
     </Card>
   );
 }

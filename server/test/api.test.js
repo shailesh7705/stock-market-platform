@@ -8,6 +8,7 @@ const assert = require("node:assert/strict");
 const request = require("supertest");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const { yahoo } = require("./yahooHook");
 const { createApp } = require("../app");
@@ -246,4 +247,188 @@ test("stockpulse api", async (t) => {
     assert.equal(retried.emailStatus, "sent");
     global.__marketOpen = true;
   });
+
+  await t.test("sprint 14 auth lifecycle, security cookies, preferences and DPDP compliance", async () => {
+    // 1. Register with cookies and verification token
+    const regRes = await request(app)
+      .post("/api/auth/register")
+      .send({ name: "Sprint Fourteen", email: "sprint14@example.com", password: "Password123" });
+    assert.equal(regRes.status, 201);
+    assert.ok(regRes.body.token);
+
+    const cookies = regRes.headers["set-cookie"] || [];
+    assert.ok(cookies.some((c) => c.includes("access_token=")));
+    assert.ok(cookies.some((c) => c.includes("refresh_token=")));
+
+    // 2. Email verification
+    const spUser = await User.findOne({ email: "sprint14@example.com" });
+    assert.equal(spUser.isEmailVerified, false);
+    assert.ok(spUser.emailVerificationTokenHash);
+
+    const badVerify = await request(app).post("/api/auth/verify-email").send({ token: "invalid-token" });
+    assert.equal(badVerify.status, 400);
+
+    const resend = await request(app).post("/api/auth/resend-verification").send({ email: "sprint14@example.com" });
+    assert.equal(resend.status, 200);
+
+    const rawVerifyToken = crypto.randomBytes(32).toString("hex");
+    spUser.emailVerificationTokenHash = crypto.createHash("sha256").update(rawVerifyToken).digest("hex");
+    spUser.emailVerificationExpires = new Date(Date.now() + 3600000);
+    await spUser.save();
+
+    const goodVerify = await request(app).post("/api/auth/verify-email").send({ token: rawVerifyToken });
+    assert.equal(goodVerify.status, 200);
+    assert.equal(goodVerify.body.user.isEmailVerified, true);
+
+    // 3. Profile & me
+    const meRes = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${regRes.body.token}`);
+    assert.equal(meRes.status, 200);
+    assert.equal(meRes.body.user.email, "sprint14@example.com");
+    assert.ok(meRes.body.sessionsCount >= 1);
+
+    // 4. Update Settings / Preferences
+    const settingsRes = await request(app)
+      .put("/api/auth/settings")
+      .set("Authorization", `Bearer ${regRes.body.token}`)
+      .send({
+        name: "Sprint 14 Renamed",
+        alertSound: true,
+        emailNotificationsEnabled: true,
+        alertDigestFrequency: "daily",
+        themePreference: "light",
+      });
+    assert.equal(settingsRes.status, 200);
+    assert.equal(settingsRes.body.user.name, "Sprint 14 Renamed");
+    assert.equal(settingsRes.body.user.themePreference, "light");
+
+    // Also test legacy updatePreferences mapping
+    const prefRes = await request(app)
+      .put("/api/auth/preferences")
+      .set("Authorization", `Bearer ${regRes.body.token}`)
+      .send({ alertSound: false, themePreference: "dark" });
+    assert.equal(prefRes.status, 200);
+
+    // 5. Change Password
+    const badPw = await request(app)
+      .put("/api/auth/password")
+      .set("Authorization", `Bearer ${regRes.body.token}`)
+      .send({ currentPassword: "WrongPassword1", newPassword: "NewPassword123" });
+    assert.equal(badPw.status, 400);
+
+    const goodPw = await request(app)
+      .put("/api/auth/password")
+      .set("Authorization", `Bearer ${regRes.body.token}`)
+      .send({ currentPassword: "Password123", newPassword: "NewPassword123" });
+    assert.equal(goodPw.status, 200);
+
+    // 6. Token refresh & reuse detection
+    const refreshCookie = (goodPw.headers["set-cookie"] || []).find((c) => c.startsWith("refresh_token="));
+    assert.ok(refreshCookie);
+    const refreshCookieVal = refreshCookie.split(";")[0];
+
+    const refreshRes = await request(app)
+      .post("/api/auth/refresh")
+      .set("Cookie", [refreshCookieVal]);
+    assert.equal(refreshRes.status, 200);
+    assert.ok(refreshRes.body.token);
+
+    // Replay old refresh token -> triggers reuse detection & revocation
+    const reuseRes = await request(app)
+      .post("/api/auth/refresh")
+      .set("Cookie", [refreshCookieVal]);
+    assert.equal(reuseRes.status, 401);
+
+    // 7. Logout single session
+    const loginRes = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "sprint14@example.com", password: "NewPassword123" });
+    assert.equal(loginRes.status, 200);
+
+    const loginRefreshCookie = (loginRes.headers["set-cookie"] || []).find((c) => c.startsWith("refresh_token="));
+    const logoutRes = await request(app)
+      .post("/api/auth/logout")
+      .set("Authorization", `Bearer ${loginRes.body.token}`)
+      .set("Cookie", [loginRefreshCookie.split(";")[0]]);
+    assert.equal(logoutRes.status, 200);
+
+    // 8. Logout all devices (remote session revocation)
+    const login2 = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "sprint14@example.com", password: "NewPassword123" });
+    const logoutAllRes = await request(app)
+      .post("/api/auth/logout-all")
+      .set("Authorization", `Bearer ${login2.body.token}`);
+    assert.equal(logoutAllRes.status, 200);
+
+    // Old token must now be rejected
+    const checkInvalidated = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${login2.body.token}`);
+    assert.equal(checkInvalidated.status, 401);
+
+    // 9. Export user data & Delete account (DPDP Act 2023)
+    const login3 = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "sprint14@example.com", password: "NewPassword123" });
+
+    await request(app)
+      .post("/api/watchlist")
+      .set("Authorization", `Bearer ${login3.body.token}`)
+      .send({ symbol: "INFY", companyName: "Infosys" });
+
+    const exportRes = await request(app)
+      .get("/api/auth/export-data")
+      .set("Authorization", `Bearer ${login3.body.token}`);
+    assert.equal(exportRes.status, 200);
+    assert.equal(exportRes.body.user.email, "sprint14@example.com");
+    assert.ok(Array.isArray(exportRes.body.watchlist));
+    assert.ok(exportRes.body.watchlist.length > 0);
+
+    // Account deletion - wrong password
+    const delBad = await request(app)
+      .delete("/api/auth/account")
+      .set("Authorization", `Bearer ${login3.body.token}`)
+      .send({ password: "WrongPassword" });
+    assert.equal(delBad.status, 400);
+
+    // Account deletion - success
+    const delGood = await request(app)
+      .delete("/api/auth/account")
+      .set("Authorization", `Bearer ${login3.body.token}`)
+      .send({ password: "NewPassword123" });
+    assert.equal(delGood.status, 200);
+
+    const deletedUser = await User.findOne({ email: "sprint14@example.com" });
+    assert.equal(deletedUser, null);
+
+    // 10. Forgot password & reset password flow
+    await request(app)
+      .post("/api/auth/register")
+      .send({ name: "Forgot Pass", email: "forgot@example.com", password: "Password123" });
+
+    const fpRes = await request(app)
+      .post("/api/auth/forgot-password")
+      .send({ email: "forgot@example.com" });
+    assert.equal(fpRes.status, 200);
+
+    const fpUser = await User.findOne({ email: "forgot@example.com" });
+    assert.ok(fpUser.passwordResetHash);
+    assert.ok(fpUser.passwordResetExpires);
+
+    const resetJwt = jwt.sign(
+      { id: fpUser._id, purpose: "password-reset" },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+    fpUser.passwordResetHash = crypto.createHash("sha256").update(resetJwt).digest("hex");
+    await fpUser.save();
+
+    const resetRes = await request(app)
+      .post("/api/auth/reset-password")
+      .send({ token: resetJwt, password: "NewPassword456" });
+    assert.equal(resetRes.status, 200);
+  });
+
 });

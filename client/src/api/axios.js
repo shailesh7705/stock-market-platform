@@ -19,6 +19,7 @@ const baseURL = rawUrl.replace(/\/+$/, "");
 
 const API = axios.create({
   baseURL,
+  withCredentials: true, // SP-29: Automatically send httpOnly cookies (access_token, refresh_token)
   headers: {
     "Content-Type": "application/json",
   },
@@ -28,10 +29,10 @@ const API = axios.create({
 let coldStartTimer = null;
 let coldStartToastId = null;
 
-// Attach JWT Token
+// Attach Bearer Token if stored (dual-mode: works with both cookies & Bearer headers)
 API.interceptors.request.use((req) => {
-  const token = localStorage.getItem("token");
-  if (token) {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (token && !req.headers.Authorization) {
     req.headers.Authorization = `Bearer ${token}`;
   }
 
@@ -48,7 +49,18 @@ API.interceptors.request.use((req) => {
   return req;
 });
 
-// Dismiss cold start toast and handle responses
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
+};
+
+// Dismiss cold start toast and handle automatic token refresh
 API.interceptors.response.use(
   (res) => {
     if (coldStartTimer) {
@@ -61,7 +73,7 @@ API.interceptors.response.use(
     }
     return res;
   },
-  (error) => {
+  async (error) => {
     if (coldStartTimer) {
       clearTimeout(coldStartTimer);
       coldStartTimer = null;
@@ -71,23 +83,69 @@ API.interceptors.response.use(
       coldStartToastId = null;
     }
 
-    if (error.response?.status === 401) {
-      const url = error.config?.url || "";
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      const url = String(originalRequest.url || "");
       const isAuthEndpoint =
         url.includes("/auth/login") ||
         url.includes("/auth/register") ||
+        url.includes("/auth/refresh") ||
         url.includes("/auth/forgot-password") ||
         url.includes("/auth/reset-password");
+
       if (!isAuthEndpoint) {
-        console.warn("[Auth] Session expired or unauthorized. Clearing stored token.");
-        useAuthStore.getState().logout();
-        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-          const returnTo = `${window.location.pathname}${window.location.search}`;
-          window.history.pushState({ from: returnTo }, "", `/login?expired=1`);
-          window.dispatchEvent(new PopStateEvent("popstate"));
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          })
+            .then((newToken) => {
+              if (newToken) {
+                originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              }
+              return API(originalRequest);
+            })
+            .catch((err) => Promise.reject(err));
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+          // Attempt silent session refresh via httpOnly refresh_token cookie
+          const refreshRes = await axios.post(
+            `${baseURL}/auth/refresh`,
+            {},
+            { withCredentials: true }
+          );
+
+          const newToken = refreshRes.data?.token;
+          if (newToken) {
+            localStorage.setItem("token", newToken);
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            if (refreshRes.data?.user) {
+              useAuthStore.getState().patchUser(refreshRes.data.user);
+            }
+          }
+
+          processQueue(null, newToken);
+          isRefreshing = false;
+          return API(originalRequest);
+        } catch (refreshErr) {
+          processQueue(refreshErr, null);
+          isRefreshing = false;
+          console.warn("[Auth] Silent refresh failed, logging out.");
+          useAuthStore.getState().logout();
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+            const returnTo = `${window.location.pathname}${window.location.search}`;
+            window.history.pushState({ from: returnTo }, "", `/login?expired=1`);
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }
+          return Promise.reject(refreshErr);
         }
       }
     }
+
     return Promise.reject(error);
   }
 );

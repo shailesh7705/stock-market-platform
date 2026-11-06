@@ -2,13 +2,15 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
+import MobileBottomNav from "./MobileBottomNav";
+import Footer from "./Footer";
 import { AnimatePresence, motion } from "framer-motion";
 
 function AppLayout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#090e17] text-slate-100 flex flex-col selection:bg-emerald-500/30 selection:text-emerald-300">
+    <div className="min-h-screen bg-[#090e17] text-slate-100 flex flex-col selection:bg-amber-500/30 selection:text-amber-300">
       {/* Global Top Navbar */}
       <TopNavbar onOpenMobileMenu={() => setMobileMenuOpen(true)} />
 
@@ -36,10 +38,16 @@ function AppLayout({ children }) {
         )}
       </AnimatePresence>
 
-      {/* Main Content Area — Centered, Responsive, Full-Width Breathing Room */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden">
+      {/* Main Content Area */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 md:pb-6 overflow-x-hidden">
         {children}
       </main>
+
+      {/* Global Regulatory & Legal Footer */}
+      <Footer />
+
+      {/* Mobile Bottom Navigation Bar (< 768px) */}
+      <MobileBottomNav />
     </div>
   );
 }
