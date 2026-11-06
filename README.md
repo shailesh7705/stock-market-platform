@@ -159,12 +159,16 @@
 | Variable | Description | Example |
 | :--- | :--- | :--- |
 | `PORT` | Server listening port | `5000` |
-| `MONGO_URI` | MongoDB Atlas Connection String | `mongodb+srv://user:pass@cluster.mongodb.net/...` |
-| `JWT_SECRET` | Secret key for JWT signing | `your_secret_key` |
-| `EMAIL_USER` | Gmail address for sending alerts | `stockalert28@gmail.com` |
-| `EMAIL_PASS` | Gmail App Password (16 chars) | `kaad rafp sxuo wbha` |
+| `MONGO_URI` | MongoDB Atlas Connection String | `mongodb+srv://<user>:<password>@<cluster>.mongodb.net/<db>` |
+| `JWT_SECRET` | Secret key for JWT signing (32+ random bytes) | `<generate with: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))">` |
+| `EMAIL_USER` | Gmail address for sending alerts | `<your-alerts-address>@gmail.com` |
+| `EMAIL_PASS` | Gmail App Password (16 chars) | `<your-gmail-app-password>` |
 | `FRONTEND_URL` | Deployed Vercel frontend URL | `https://stockpulse-mu-three.vercel.app` |
-| `NEWS_API_KEY` | (Optional) NewsAPI.org API Key | `your_news_api_key` |
+| `ALLOWED_ORIGINS` | (Optional) Extra comma-separated CORS origins | `https://stockpulse.example.com` |
+| `NEWS_API_KEY` | (Optional) NewsAPI.org API Key | `<your-newsapi-key>` |
+| `RENDER_EXTERNAL_URL` | (Optional) Public API URL used by keep-alive pings | `https://<service>.onrender.com` |
+
+Copy `server/.env.example` to `server/.env` and `client/.env.example` to `client/.env` for local development. Never commit real `.env` files.
 
 ### Client (`client/.env` & Vercel Environment Variables)
 | Variable | Description | Example |
