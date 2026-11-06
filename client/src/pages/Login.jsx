@@ -1,6 +1,6 @@
 // client/src/pages/Login.jsx
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, Zap, Activity, Lock, Mail, ArrowRight, Sparkles, ShieldCheck, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Activity, Lock, Mail, ArrowRight, AlertCircle } from "lucide-react";
 import { loginUser } from "../services/authService";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import useAuthStore from "../store/authStore";

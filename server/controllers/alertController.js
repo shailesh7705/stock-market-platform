@@ -71,7 +71,7 @@ const createAlert = async (req, res) => {
     res.status(201).json(alert);
   } catch (error) {
     console.error("[Alert] Create error:", error.message);
-    res.status(500).json({ message: error.message || "Failed to create alert" });
+    res.status(500).json({ message: "Failed to create alert" });
   }
 };
 

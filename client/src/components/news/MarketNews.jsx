@@ -5,6 +5,15 @@ import { motion } from "framer-motion";
 import Card from "../ui/Card";
 import { getMarketNews } from "../../services/newsService";
 
+function safeExternalUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function formatNewsTime(publishedAt) {
   if (!publishedAt) return "";
   const diff = Math.floor((Date.now() - new Date(publishedAt)) / 60000);
@@ -56,7 +65,7 @@ function MarketNews() {
           news.slice(0, 6).map((article, idx) => (
             <motion.a
               key={idx}
-              href={article.url}
+              href={safeExternalUrl(article.url)}
               target="_blank"
               rel="noopener noreferrer"
               whileHover={{ y: -3 }}

@@ -4,6 +4,9 @@ import { parseBrokerCsv } from "../../utils/brokerCsv";
 import { bulkImportHoldings } from "../../services/portfolioService";
 import toast from "react-hot-toast";
 
+const MAX_CSV_BYTES = 2 * 1024 * 1024;
+const MAX_CSV_ROWS = 1000;
+
 export default function BrokerImportModal({ open, onClose, onImported }) {
   const [broker, setBroker] = useState("CSV");
   const [rows, setRows] = useState([]);
@@ -19,9 +22,19 @@ export default function BrokerImportModal({ open, onClose, onImported }) {
 
   const loadFile = async (file) => {
     if (!file) return;
+    if (file.size > MAX_CSV_BYTES) {
+      setRows([]);
+      setError("That file is larger than 2 MB. Export only your current holdings and try again.");
+      return;
+    }
     const text = await file.text();
     const parsed = parseBrokerCsv(text);
     setBroker(parsed.broker);
+    if (parsed.rows.length > MAX_CSV_ROWS) {
+      setRows([]);
+      setError(`That file has more than ${MAX_CSV_ROWS} rows. Export only your current holdings and try again.`);
+      return;
+    }
     setRows(parsed.rows);
     setError(parsed.error || "");
   };

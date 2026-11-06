@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Portfolio = require("../models/Portfolio");
 const { fetchSingleStockDetails } = require("./stockController");
+const { normalizeSymbol } = require("../utils/symbols");
 
 function round2(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -23,14 +24,6 @@ function gradeFromScore(score) {
     return { grade: "C", gradeLabel: "Selective / Cyclical" };
   }
   return { grade: "D", gradeLabel: "High Risk / Poor Long-Term Compounder" };
-}
-
-function normalizeSymbol(raw) {
-  if (!raw || typeof raw !== "string") return "";
-  let symbol = raw.trim().toUpperCase();
-  if (!symbol) return "";
-  if (!symbol.includes(".")) symbol = `${symbol}.NS`;
-  return symbol;
 }
 
 function parsePositive(value, label) {
@@ -340,7 +333,7 @@ const updateHolding = async (req, res) => {
 
 async function mergeHolding(userId, input) {
   const symbol = normalizeSymbol(input.symbol);
-  if (!symbol) return { error: "Symbol is required" };
+  if (!symbol) return { error: "Enter a valid NSE or BSE symbol" };
   const qty = parsePositive(input.quantity, "Quantity");
   if (qty.error) return { error: qty.error };
   const price = parsePositive(input.avgBuyPrice, "Average buy price");

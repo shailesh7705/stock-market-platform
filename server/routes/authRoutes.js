@@ -9,15 +9,17 @@ const {
   resetPassword,
   updatePreferences,
 } = require("../controllers/authController");
+const validate = require("../middleware/validate");
+const { auth } = require("../validation/schemas");
 
 const router = express.Router();
 
-router.post("/register", authLimiter, registerUser);
+router.post("/register", authLimiter, validate(auth.register), registerUser);
 
-router.post("/login", authLimiter, loginUser);
-router.post("/forgot-password", authLimiter, forgotPassword);
-router.post("/reset-password", authLimiter, resetPassword);
-router.patch("/preferences", protect, updatePreferences);
+router.post("/login", authLimiter, validate(auth.login), loginUser);
+router.post("/forgot-password", authLimiter, validate(auth.forgot), forgotPassword);
+router.post("/reset-password", authLimiter, validate(auth.reset), resetPassword);
+router.patch("/preferences", protect, validate(auth.preferences), updatePreferences);
 router.get("/profile", protect, (req, res) => {
 
   res.json({
