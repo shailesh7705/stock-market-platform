@@ -8,7 +8,7 @@ const METRICS = [
   { key: "priceToBook", label: "Price to Book", better: "low", digits: 2 },
   { key: "pegRatio", label: "PEG Ratio", better: "low", digits: 2 },
   { key: "roe", label: "ROE %", better: "high", digits: 1 },
-  { key: "roce", label: "ROCE / ROA %", better: "high", digits: 1 },
+  { key: "roa", label: "ROA %", better: "high", digits: 1 },
   { key: "operatingMargin", label: "Operating Margin %", better: "high", digits: 1 },
   { key: "debtToEquity", label: "Debt to Equity", better: "low", digits: 2 },
   { key: "interestCoverage", label: "Interest Coverage", better: "high", digits: 1 },

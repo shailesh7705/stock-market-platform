@@ -18,7 +18,7 @@ const router = express.Router();
 router.use(protect);
 
 router.post("/", validate(alerts.create), createAlert);
-router.get("/", getAlerts);
+router.get("/", validate(alerts.list), getAlerts);
 router.post("/test", testEmailLimiter, validate(alerts.test), sendTestAlert);
 router.patch("/:id", validate(alerts.update), updateAlert);
 router.delete("/:id", validate(alerts.byId), deleteAlert);

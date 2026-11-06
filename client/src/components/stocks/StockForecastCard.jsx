@@ -1,5 +1,5 @@
 // client/src/components/stocks/StockForecastCard.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import Card from "../ui/Card";
 import {
   TrendingUp,
@@ -17,19 +17,13 @@ import {
   BarChart3,
   Compass,
 } from "lucide-react";
-import { calculateForecast } from "../../utils/forecastEngine";
-
 export default function StockForecastCard({ details, livePrice }) {
   const [selectedHorizon, setSelectedHorizon] = useState("all"); // 'all' | '1Y' | '3Y' | '5Y'
   const [selectedScenario, setSelectedScenario] = useState("base"); // 'bear' | 'base' | 'bull'
 
   const price = Number(livePrice || details?.price || 0);
 
-  // Compute or refresh forecast if live price changes
-  const forecast = useMemo(() => {
-    if (!details) return null;
-    return calculateForecast(details, price, details.pulseScore);
-  }, [details, price]);
+  const forecast = details?.forecast || null;
 
   if (!forecast || !forecast.oneYear || !forecast.threeYear || !forecast.fiveYear) {
     return null;

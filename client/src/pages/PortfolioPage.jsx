@@ -106,18 +106,22 @@ export default function PortfolioPage() {
       setResults([]);
       return undefined;
     }
+    let cancelled = false;
     const timer = setTimeout(async () => {
       try {
         setSearching(true);
         const data = await searchStocks(trimmed);
-        setResults(Array.isArray(data) ? data : []);
+        if (!cancelled) setResults(Array.isArray(data) ? data : []);
       } catch {
-        setResults([]);
+        if (!cancelled) setResults([]);
       } finally {
-        setSearching(false);
+        if (!cancelled) setSearching(false);
       }
     }, 200);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query, modalOpen, editing]);
 
   const openAdd = () => {

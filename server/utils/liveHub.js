@@ -1,15 +1,15 @@
 const YahooFinance = require("yahoo-finance2").default;
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
-const { getCache, setCache } = require("./memoryCache");
+const { recall, remember } = require("./memoryCache");
 const { publishIndices, indicesListenerCount } = require("./alertBus");
 
 const YF_OPTS = { validateResult: false };
 
 async function snapshotIndices() {
-  const cached = getCache("indices");
-  if (cached) {
-    publishIndices(cached);
-    return cached;
+  const cached = recall("indices");
+  if (cached && !cached.stale) {
+    publishIndices(cached.data);
+    return cached.data;
   }
 
   try {
@@ -35,8 +35,10 @@ async function snapshotIndices() {
     }
 
     if (data.length) {
-      setCache("indices", data, 45 * 1000);
+      remember("indices", data, 45 * 1000);
       publishIndices(data);
+    } else if (cached?.data?.length) {
+      publishIndices(cached.data);
     }
     return data;
   } catch (error) {

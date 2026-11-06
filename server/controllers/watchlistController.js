@@ -5,6 +5,7 @@ const YahooFinance = require("yahoo-finance2").default;
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
 const YF_OPTS = { validateResult: false };
+const { sparklinesFor } = require("../utils/sparklines");
 const DEFAULT_LIST = "My Watchlist";
 
 function normalizeListName(name) {
@@ -69,7 +70,7 @@ const addToWatchlist = async (req, res) => {
     });
 
     if (existing) {
-      return res.status(400).json({ message: "Stock is already in this list" });
+      return res.status(409).json({ message: "Stock is already in this list" });
     }
 
     const last = await Watchlist.findOne({ user: req.user._id, listName: boardName }).sort({ position: -1 });
@@ -101,12 +102,15 @@ const addToWatchlist = async (req, res) => {
       positive,
       dayHigh: quote?.regularMarketDayHigh || null,
       dayLow: quote?.regularMarketDayLow || null,
-      data: [20, 25, 22, 30, 27, 35],
+      data: [],
       listName: item.listName,
       tags: item.tags || [],
       position: item.position,
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "Stock is already in this list" });
+    }
     console.error("[Watchlist] Add error:", error.message);
     res.status(500).json({ message: "Failed to add to watchlist" });
   }
@@ -131,6 +135,7 @@ const getWatchlist = async (req, res) => {
       if (q?.symbol) quoteMap.set(q.symbol, q);
     }
 
+    const lines = await sparklinesFor(symbols);
     const formatted = watchlist.map((item) => {
       const quote = quoteMap.get(item.symbol);
       const price = quote?.regularMarketPrice || 0;
@@ -152,7 +157,7 @@ const getWatchlist = async (req, res) => {
         dayLow: quote?.regularMarketDayLow || null,
         fiftyTwoWeekHigh: quote?.fiftyTwoWeekHigh || null,
         fiftyTwoWeekLow: quote?.fiftyTwoWeekLow || null,
-        data: [20, 25, 22, 30, 27, 35],
+        data: lines.get(item.symbol) || [],
         listName: item.listName || DEFAULT_LIST,
         tags: item.tags || [],
         position: item.position || 0,
@@ -306,7 +311,7 @@ const updateWatchlistItem = async (req, res) => {
         _id: { $ne: item._id },
       });
       if (duplicate) {
-        return res.status(400).json({ message: "Stock is already in this list" });
+        return res.status(409).json({ message: "Stock is already in this list" });
       }
       item.listName = nextList;
     }

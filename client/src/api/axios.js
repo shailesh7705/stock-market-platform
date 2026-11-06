@@ -1,5 +1,6 @@
 // client/src/api/axios.js
 import axios from "axios";
+import useAuthStore from "../store/authStore";
 
 // If running in local dev or on localhost, connect to local backend (port 5000)
 // Otherwise in production deployment, connect to production Render backend
@@ -54,10 +55,11 @@ API.interceptors.response.use(
         url.includes("/auth/reset-password");
       if (!isAuthEndpoint) {
         console.warn("[Auth] Session expired or unauthorized. Clearing stored token.");
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        useAuthStore.getState().logout();
         if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-          window.location.href = "/login?expired=1";
+          const returnTo = `${window.location.pathname}${window.location.search}`;
+          window.history.pushState({ from: returnTo }, "", `/login?expired=1`);
+          window.dispatchEvent(new PopStateEvent("popstate"));
         }
       }
     }

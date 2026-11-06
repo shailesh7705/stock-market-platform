@@ -12,6 +12,7 @@ function CreateAlertModal({ open, onClose, stock, onAlertCreated }) {
   const [condition, setCondition] = useState("above"); // "above" | "below"
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [conflict, setConflict] = useState(null);
   const { addAlert } = useAlertStore();
   const { user } = useAuthStore();
 
@@ -20,6 +21,14 @@ function CreateAlertModal({ open, onClose, stock, onAlertCreated }) {
   const currentPriceNumeric = parseFloat(
     String(stock?.price || stock?.numericPrice || "0").replace(/[^0-9.]/g, "")
   );
+
+  useEffect(() => {
+    if (open) return;
+    setTargetPrice("");
+    setNotes("");
+    setCondition("above");
+    setConflict(null);
+  }, [open]);
 
   useEffect(() => {
     if (open && currentPriceNumeric > 0 && !targetPrice) {
@@ -76,10 +85,15 @@ function CreateAlertModal({ open, onClose, stock, onAlertCreated }) {
 
       setTargetPrice("");
       setNotes("");
+      setConflict(null);
       onClose();
     } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Failed to create alert");
+      const data = error.response?.data;
+      if (error.response?.status === 409 && data?.code === "CONDITION_ALREADY_MET") {
+        setConflict(data);
+        return;
+      }
+      toast.error(data?.message || "Failed to create alert");
     } finally {
       setLoading(false);
     }
@@ -270,6 +284,22 @@ function CreateAlertModal({ open, onClose, stock, onAlertCreated }) {
                   </div>
                 )}
               </div>
+
+              {conflict?.suggestedCondition && (
+                <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3">
+                  <p className="text-[12px] leading-relaxed text-amber-100">{conflict.message}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCondition(conflict.suggestedCondition);
+                      setConflict(null);
+                    }}
+                    className="mt-2 text-[12px] font-bold text-amber-300 hover:text-amber-200"
+                  >
+                    Switch to {conflict.suggestedCondition === "below" ? "Drops Below" : "Rises Above"}
+                  </button>
+                </div>
+              )}
 
               {/* Submit Button */}
               <button

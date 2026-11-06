@@ -101,7 +101,7 @@ function calculateForecast(data = {}, livePrice = null, pulseScore = null) {
 
   const oneYear = {
     horizon: "1 Year",
-    timeframe: "12 Months (2027)",
+    timeframe: `12 Months (${new Date().getFullYear() + 1})`,
     targetPrice: target1Y,
     expectedReturnPct: Number(base1YReturnPct.toFixed(1)),
     cagrPct: Number(base1YReturnPct.toFixed(1)),
@@ -163,7 +163,7 @@ function calculateForecast(data = {}, livePrice = null, pulseScore = null) {
 
   const threeYear = {
     horizon: "3 Years",
-    timeframe: "36 Months (2029)",
+    timeframe: `36 Months (${new Date().getFullYear() + 3})`,
     targetPrice: target3Y,
     expectedReturnPct: return3YPct,
     cagrPct: base3YCAGR,
@@ -225,7 +225,7 @@ function calculateForecast(data = {}, livePrice = null, pulseScore = null) {
 
   const fiveYear = {
     horizon: "5 Years",
-    timeframe: "60 Months (2031)",
+    timeframe: `60 Months (${new Date().getFullYear() + 5})`,
     targetPrice: target5Y,
     expectedReturnPct: return5YPct,
     cagrPct: base5YCAGR,

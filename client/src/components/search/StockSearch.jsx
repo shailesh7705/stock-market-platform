@@ -82,20 +82,25 @@ export default function StockSearch({ inline = false, placeholder = "Search 2,36
       return;
     }
 
+    let cancelled = false;
     const timer = setTimeout(async () => {
       try {
         setLoading(true);
         const data = await searchStocks(trimmed);
+        if (cancelled) return;
         setResults(Array.isArray(data) ? data : []);
         setSelectedIndex(-1);
       } catch (err) {
         console.error("[StockSearch] Error:", err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, 150);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query]);
 
   // Arrow key navigation

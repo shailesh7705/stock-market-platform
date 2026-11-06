@@ -57,6 +57,13 @@ const symbolParam = z.object({
 });
 
 const idParam = z.object({ id: objectId });
+
+// Cursor pagination: pass the createdAt of the last item as `before` to fetch the next page.
+const pageQuery = (defaultLimit, maxLimit) =>
+  z.object({
+    limit: z.coerce.number().int().min(1).max(maxLimit).default(defaultLimit),
+    before: z.coerce.date("Invalid cursor").optional(),
+  });
 const positiveNumber = (label) =>
   z.coerce.number(`${label} must be a number`).positive(`${label} must be a positive number`).max(1e9, `${label} is too large`);
 const shortText = (max) => z.string().trim().max(max, `Must be ${max} characters or fewer`);
@@ -110,7 +117,10 @@ const alerts = {
     body: z.object({
       symbol: tradableSymbol,
       targetPrice: positiveNumber("Target price"),
-      condition: z.enum(["above", "below"]).optional(),
+      condition: z.enum(
+        ["above", "below"],
+        "Choose whether the price should rise above or fall below the target"
+      ),
       notes: optionalText(280),
     }),
   },
@@ -118,6 +128,7 @@ const alerts = {
     params: idParam,
     body: z.object({
       targetPrice: positiveNumber("Target price").optional(),
+      condition: z.enum(["above", "below"]).optional(),
       rearm: z.boolean().optional(),
     }),
   },
@@ -129,6 +140,7 @@ const alerts = {
     }),
   },
   byId: { params: idParam },
+  list: { query: pageQuery(200, 500) },
 };
 
 const listName = shortText(40);
@@ -197,6 +209,6 @@ const portfolio = {
   byId: { params: idParam },
 };
 
-const notifications = { byId: { params: idParam } };
+const notifications = { byId: { params: idParam }, list: { query: pageQuery(50, 100) } };
 
 module.exports = { stocks, auth, alerts, watchlist, portfolio, notifications, MAX_BATCH_SYMBOLS };

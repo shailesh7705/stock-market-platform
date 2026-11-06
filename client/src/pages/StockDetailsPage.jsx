@@ -1,5 +1,5 @@
 // client/src/pages/StockDetailsPage.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import Card from "../components/ui/Card";
@@ -43,6 +43,8 @@ function StockDetailsPage() {
   const [inWatchlist, setInWatchlist] = useState(false);
   const [watchlistId, setWatchlistId] = useState(null);
   const [wlLoading, setWlLoading] = useState(false);
+  const [missing, setMissing] = useState(false);
+  const requestRef = useRef(0);
 
   const { watchlist, addStock, removeStock } = useWatchlistStore();
 
@@ -50,100 +52,98 @@ function StockDetailsPage() {
   const displaySymbol = cleanSymbol(symbol);
 
   useEffect(() => {
-    fetchStockData();
+    const request = ++requestRef.current;
+    let active = true;
+    setLoading(true);
+    setMissing(false);
+    setStock(null);
+    setDetails(null);
+
+    const load = async () => {
+      try {
+        const detailsData = await getStockDetails(nsSymbol);
+        if (!active || request !== requestRef.current) return;
+        if (detailsData) {
+          setDetails(detailsData);
+          setStock({
+            symbol: detailsData.symbol,
+            name: detailsData.name,
+            shortName: detailsData.shortName,
+            longName: detailsData.longName,
+            price: detailsData.price,
+            change: detailsData.change,
+            changeAmount: detailsData.changeAmount,
+            positive: detailsData.positive,
+            volume: detailsData.volume,
+            high: detailsData.dayHigh,
+            low: detailsData.dayLow,
+            fiftyTwoWeekHigh: detailsData.fiftyTwoWeekHigh,
+            fiftyTwoWeekLow: detailsData.fiftyTwoWeekLow,
+            trailingPE: detailsData.defaultKeyStatistics?.trailingPE,
+            dividendYield: detailsData.dividendYield ?? detailsData.financialData?.dividendYield ?? detailsData.pulseScore?.pillars?.pillar4_sponsorship?.details?.dividendYield?.percent ?? null,
+            currency: detailsData.currency,
+            exchange: detailsData.exchange,
+          });
+          saveRecentlyViewedStock({
+            symbol: nsSymbol,
+            name: detailsData.name,
+            price: detailsData.price,
+            change: detailsData.change,
+            positive: detailsData.positive,
+            pulseScore: detailsData.pulseScore,
+          });
+        }
+      } catch (error) {
+        if (!active || request !== requestRef.current) return;
+        if (error.response?.status === 404) {
+          setMissing(true);
+          return;
+        }
+        console.error("Error fetching stock details:", error);
+      } finally {
+        if (active && request === requestRef.current) setLoading(false);
+      }
+    };
+
+    const checkWatchlist = async () => {
+      try {
+        const data = await getWatchlist();
+        if (!active || request !== requestRef.current) return;
+        const found = (data || []).find(
+          (item) => item.symbol === nsSymbol || cleanSymbol(item.symbol) === displaySymbol
+        );
+        if (found) {
+          setInWatchlist(true);
+          setWatchlistId(found._id);
+        } else {
+          setInWatchlist(false);
+          setWatchlistId(null);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    load();
     checkWatchlist();
 
-    // Poll live price every 15s
     const interval = setInterval(async () => {
       try {
         const live = await getLiveStocks([nsSymbol]);
+        if (!active || request !== requestRef.current) return;
         if (Array.isArray(live) && live.length > 0) {
           setStock((prev) => ({ ...prev, ...live[0] }));
         }
-      } catch (err) {
-        // silent polling catch
+      } catch {
+        // Keep the last price when a poll fails.
       }
     }, 15000);
 
-    return () => clearInterval(interval);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, [symbol]);
-
-  const fetchStockData = async () => {
-    setLoading(true);
-    try {
-      // 1. Fetch deep institutional stock intelligence
-      const detailsData = await getStockDetails(nsSymbol);
-      if (detailsData) {
-        setDetails(detailsData);
-        setStock({
-          symbol: detailsData.symbol,
-          name: detailsData.name,
-          shortName: detailsData.shortName,
-          longName: detailsData.longName,
-          price: detailsData.price,
-          change: detailsData.change,
-          changeAmount: detailsData.changeAmount,
-          positive: detailsData.positive,
-          volume: detailsData.volume,
-          high: detailsData.dayHigh,
-          low: detailsData.dayLow,
-          fiftyTwoWeekHigh: detailsData.fiftyTwoWeekHigh,
-          fiftyTwoWeekLow: detailsData.fiftyTwoWeekLow,
-          trailingPE: detailsData.defaultKeyStatistics?.trailingPE,
-          dividendYield: detailsData.dividendYield ?? detailsData.financialData?.dividendYield ?? detailsData.pulseScore?.pillars?.pillar4_sponsorship?.details?.dividendYield?.percent ?? null,
-          currency: detailsData.currency,
-          exchange: detailsData.exchange,
-        });
-
-        // Save to recently viewed stocks
-        saveRecentlyViewedStock({
-          symbol: nsSymbol,
-          name: detailsData.name,
-          price: detailsData.price,
-          change: detailsData.change,
-          positive: detailsData.positive,
-          pulseScore: detailsData.pulseScore,
-        });
-      } else {
-        // Fallback to live stock if details fails
-        const data = await getLiveStocks([nsSymbol]);
-        if (Array.isArray(data) && data.length > 0) {
-          setStock(data[0]);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching stock details:", error);
-      // Fallback
-      try {
-        const data = await getLiveStocks([nsSymbol]);
-        if (Array.isArray(data) && data.length > 0) {
-          setStock(data[0]);
-        }
-      } catch (e) {
-        console.error("Live stock fallback error:", e);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkWatchlist = async () => {
-    try {
-      const data = await getWatchlist();
-      const found = (data || []).find(
-        (s) => s.symbol === nsSymbol || cleanSymbol(s.symbol) === displaySymbol
-      );
-      if (found) {
-        setInWatchlist(true);
-        setWatchlistId(found._id);
-      } else {
-        setInWatchlist(false);
-        setWatchlistId(null);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const handleWatchlistToggle = async () => {
     setWlLoading(true);
@@ -172,6 +172,22 @@ function StockDetailsPage() {
     }
   };
 
+  if (!loading && missing) {
+    return (
+      <AppLayout>
+        <div className="max-w-xl mx-auto py-20 text-center">
+          <h1 className="text-2xl font-black text-white">Symbol not found</h1>
+          <p className="text-sm text-gray-400 mt-2">
+            {displaySymbol} is not an NSE or BSE symbol we can quote.
+          </p>
+          <Link to="/dashboard" className="inline-flex mt-6 text-sm font-bold text-emerald-400">
+            Back to Dashboard
+          </Link>
+        </div>
+      </AppLayout>
+    );
+  }
+
   if (loading) {
     return (
       <AppLayout>
@@ -188,7 +204,7 @@ function StockDetailsPage() {
   }
 
   const isPositive = stock?.positive;
-  const changePercent = stock?.change ? stock.change.toFixed(2) : "0.00";
+  const changePercent = Number.isFinite(Number(stock?.change)) ? Number(stock.change).toFixed(2) : "0.00";
   const pulseScore = details?.pulseScore;
 
   return (

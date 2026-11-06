@@ -4,6 +4,7 @@ const User = require("../models/User");
 const Notification = require("../models/Notification");
 const sendEmail = require("../utils/sendEmail");
 const { normalizeSymbol } = require("../utils/symbols");
+const { armingDecision } = require("../utils/alertRules");
 const YahooFinance = require("yahoo-finance2").default;
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
@@ -18,51 +19,39 @@ async function fetchCurrentPrice(symbol) {
         setTimeout(() => reject(new Error("Timeout")), 4000)
       ),
     ]);
-    return quote?.regularMarketPrice || null;
+    const price = Number(quote?.regularMarketPrice);
+    return Number.isFinite(price) && price > 0 ? price : null;
   } catch {
     return null;
   }
 }
 
+// Live price is required. Returns the price, or null after the response is sent.
+async function requireArmable(res, symbol, condition, targetPrice) {
+  const decision = armingDecision({
+    symbol,
+    condition,
+    targetPrice,
+    currentPrice: await fetchCurrentPrice(symbol),
+  });
+  if (decision.ok) return decision.currentPrice;
+  res.status(decision.status).json(decision.body);
+  return null;
+}
+
 /* ── Create Alert ───────────────────────────────────────────────────────────── */
 const createAlert = async (req, res) => {
   try {
-    let { symbol, targetPrice, condition, notes } = req.body;
-
-    if (!symbol || targetPrice === undefined || targetPrice === null) {
-      return res.status(400).json({ message: "Symbol and targetPrice are required" });
-    }
-
-    const numericTarget = parseFloat(targetPrice);
-    if (isNaN(numericTarget) || numericTarget <= 0) {
-      return res.status(400).json({ message: "Target price must be a positive number" });
-    }
-
-    // Format symbol properly
-    symbol = symbol.trim().toUpperCase();
-    if (!symbol.includes(".")) {
-      symbol = `${symbol}.NS`;
-    }
-
-    // Fetch current market price
-    const currentPrice = await fetchCurrentPrice(symbol);
-
-    // Auto-detect condition if missing or invalid
-    let finalCondition = condition;
-    if (!finalCondition || (finalCondition !== "above" && finalCondition !== "below")) {
-      if (currentPrice && numericTarget < currentPrice) {
-        finalCondition = "below";
-      } else {
-        finalCondition = "above";
-      }
-    }
+    const { symbol, targetPrice, condition, notes } = req.body;
+    const currentPrice = await requireArmable(res, symbol, condition, targetPrice);
+    if (currentPrice === null) return;
 
     const alert = await Alert.create({
       user: req.user._id,
       symbol,
-      targetPrice: numericTarget,
-      condition: finalCondition,
-      initialPrice: currentPrice || null,
+      targetPrice,
+      condition,
+      initialPrice: currentPrice,
       notes: notes || "",
       active: true,
       triggered: false,
@@ -78,7 +67,14 @@ const createAlert = async (req, res) => {
 /* ── Get User's Alerts ──────────────────────────────────────────────────────── */
 const getAlerts = async (req, res) => {
   try {
-    const alerts = await Alert.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const { limit, before } = req.query;
+    const filter = { user: req.user._id };
+    if (before) filter.createdAt = { $lt: before };
+
+    const alerts = await Alert.find(filter).sort({ createdAt: -1 }).limit(limit);
+    if (alerts.length === limit) {
+      res.setHeader("X-Next-Cursor", alerts[alerts.length - 1].createdAt.toISOString());
+    }
     res.status(200).json(alerts);
   } catch (error) {
     console.error("[Alert] Get error:", error.message);
@@ -118,25 +114,34 @@ const updateAlert = async (req, res) => {
       return res.status(404).json({ message: "Alert not found" });
     }
 
-    if (req.body.targetPrice !== undefined) {
-      const numericTarget = parseFloat(req.body.targetPrice);
-      if (isNaN(numericTarget) || numericTarget <= 0) {
-        return res.status(400).json({ message: "Target price must be a positive number" });
-      }
-      alert.targetPrice = numericTarget;
+    const nextTarget = req.body.targetPrice !== undefined ? req.body.targetPrice : alert.targetPrice;
+    const nextCondition = req.body.condition || alert.condition;
+    const willRearm = Boolean(req.body.rearm);
+    const willBeLive = willRearm || (!alert.triggered && alert.active);
+    const targetChanged = nextTarget !== alert.targetPrice;
+    const conditionChanged = nextCondition !== alert.condition;
+
+    if (willBeLive && (willRearm || targetChanged || conditionChanged)) {
+      const currentPrice = await requireArmable(res, alert.symbol, nextCondition, nextTarget);
+      if (currentPrice === null) return;
+      alert.initialPrice = currentPrice;
     }
 
-    if (req.body.rearm) {
+    alert.targetPrice = nextTarget;
+    alert.condition = nextCondition;
+
+    if (willRearm) {
       alert.triggered = false;
       alert.triggeredAt = null;
       alert.triggeredPrice = null;
       alert.active = true;
-      const price = await fetchCurrentPrice(alert.symbol);
-      if (price) alert.initialPrice = price;
     }
 
     await alert.save();
-    res.status(200).json(alert);
+    if (willRearm) {
+      await Alert.updateOne({ _id: alert._id }, { $unset: { emailStatus: 1 } });
+    }
+    res.status(200).json(await Alert.findById(alert._id));
   } catch (error) {
     console.error("[Alert] Update error:", error.message);
     res.status(500).json({ message: "Failed to update alert" });
@@ -155,22 +160,24 @@ const toggleAlert = async (req, res) => {
       return res.status(404).json({ message: "Alert not found" });
     }
 
-    // If it was already triggered, re-arming resets triggered to false
-    if (alert.triggered) {
+    const turningOn = alert.triggered || !alert.active;
+    if (turningOn) {
+      const currentPrice = await requireArmable(res, alert.symbol, alert.condition, alert.targetPrice);
+      if (currentPrice === null) return;
       alert.triggered = false;
       alert.triggeredAt = null;
       alert.triggeredPrice = null;
       alert.active = true;
-      // Refresh initial price
-      const price = await fetchCurrentPrice(alert.symbol);
-      if (price) alert.initialPrice = price;
+      alert.initialPrice = currentPrice;
     } else {
-      // Toggle active status
-      alert.active = !alert.active;
+      alert.active = false;
     }
 
     await alert.save();
-    res.status(200).json(alert);
+    if (turningOn) {
+      await Alert.updateOne({ _id: alert._id }, { $unset: { emailStatus: 1 } });
+    }
+    res.status(200).json(await Alert.findById(alert._id));
   } catch (error) {
     console.error("[Alert] Toggle error:", error.message);
     res.status(500).json({ message: "Failed to update alert" });

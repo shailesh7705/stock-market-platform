@@ -1,5 +1,5 @@
 // client/src/App.jsx
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -13,6 +13,7 @@ import PortfolioPage from "./pages/PortfolioPage";
 import MarketsPage from "./pages/MarketsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotificationListener from "./components/notifications/NotificationListener";
+import NotFound from "./pages/NotFound";
 
 function App() {
   return (
@@ -82,7 +83,7 @@ function App() {
         />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

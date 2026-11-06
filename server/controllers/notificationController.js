@@ -3,10 +3,14 @@ const Notification = require("../models/Notification");
 
 const getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({
-      user: req.user._id,
-    }).sort({ createdAt: -1 }).limit(50);
+    const { limit, before } = req.query;
+    const filter = { user: req.user._id };
+    if (before) filter.createdAt = { $lt: before };
 
+    const notifications = await Notification.find(filter).sort({ createdAt: -1 }).limit(limit);
+    if (notifications.length === limit) {
+      res.setHeader("X-Next-Cursor", notifications[notifications.length - 1].createdAt.toISOString());
+    }
     res.status(200).json(notifications);
   } catch (error) {
     console.error("[Notification] Get error:", error.message);

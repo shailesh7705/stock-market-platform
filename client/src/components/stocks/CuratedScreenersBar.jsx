@@ -6,7 +6,8 @@ export const SCREENER_PRESETS = [
       && stock.debtToEquity !== null
       && stock.debtToEquity < 0.5
       && stock.roe > 18
-      && stock.profitGrowth,
+      && typeof stock.profitGrowth === "number"
+      && stock.profitGrowth > 0,
   },
   {
     id: "dividend-fortress",

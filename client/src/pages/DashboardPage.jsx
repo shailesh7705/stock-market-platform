@@ -57,15 +57,14 @@ function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const container = document.getElementById("dashboard-container");
-    if (!container) return;
-    const handleScroll = () => setShowScrollTop(container.scrollTop > 350);
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
+    const handleScroll = () => setShowScrollTop(window.scrollY > 350);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const scrollToTop = () => {
-    document.getElementById("dashboard-container")?.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (

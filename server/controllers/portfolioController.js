@@ -168,12 +168,6 @@ function buildSummary(holdings) {
   const grade = gradeFromScore(adjusted.score);
   const annualDividendIncome = round2(holdings.reduce((sum, holding) => sum + (holding.annualDividendCash || 0), 0));
   const yieldOnCost = totalInvested > 0 ? round2((annualDividendIncome / totalInvested) * 100) : 0;
-  const quarterly = round2(annualDividendIncome / 4);
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    .map((month, index) => ({
-      month,
-      amount: [2, 5, 8, 11].includes(index) ? quarterly : 0,
-    }));
   const topDividendPayers = [...holdings]
     .filter((holding) => holding.annualDividendCash > 0)
     .sort((a, b) => b.annualDividendCash - a.annualDividendCash)
@@ -202,7 +196,6 @@ function buildSummary(holdings) {
     sectors,
     annualDividendIncome,
     yieldOnCost,
-    dividendCalendar: months,
     topDividendPayers,
   };
 }

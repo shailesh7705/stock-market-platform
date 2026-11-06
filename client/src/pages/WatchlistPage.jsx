@@ -57,11 +57,13 @@ function WatchlistPage() {
   }, []);
 
   useEffect(() => {
-    if (!watchlist?.length) return;
-    fetchLivePrices();
-    const interval = setInterval(fetchLivePrices, 15000);
+    const refresh = () => {
+      if (watchlistRef.current?.length) fetchLivePrices();
+    };
+    refresh();
+    const interval = setInterval(refresh, 15000);
     return () => clearInterval(interval);
-  }, [watchlist.length]);
+  }, []);
 
   const loadBoards = async () => {
     try {
@@ -154,18 +156,22 @@ function WatchlistPage() {
       setSearchResults([]);
       return;
     }
+    let cancelled = false;
     const timer = setTimeout(async () => {
       try {
         setSearching(true);
         const data = await searchStocks(addQuery.trim());
-        setSearchResults(data || []);
+        if (!cancelled) setSearchResults(data || []);
       } catch (err) {
         console.error(err);
       } finally {
-        setSearching(false);
+        if (!cancelled) setSearching(false);
       }
     }, 200);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [addQuery]);
 
   const handleQuickAdd = async (stock) => {

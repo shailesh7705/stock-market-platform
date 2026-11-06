@@ -67,9 +67,11 @@ function SortableRow({ stock, boards, onOpen, onAlert, onRemove, onMove, onAddTa
         </div>
 
         <div className="w-24 h-8 shrink-0 hidden lg:block">
-          <Sparklines data={stock.data || [20, 25, 22, 30, 28, 35]} margin={2}>
-            <SparklinesLine color={stock.positive ? "#10b981" : "#f43f5e"} style={{ fill: "none", strokeWidth: 2 }} />
-          </Sparklines>
+          {Array.isArray(stock.data) && stock.data.length > 1 ? (
+            <Sparklines data={stock.data} margin={2}>
+              <SparklinesLine color={stock.positive ? "#10b981" : "#f43f5e"} style={{ fill: "none", strokeWidth: 2 }} />
+            </Sparklines>
+          ) : null}
         </div>
 
         <div className="flex items-center justify-between md:justify-end gap-4">

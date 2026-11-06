@@ -17,12 +17,14 @@ import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import useAlertStore from "../../store/alertStore";
 import useWatchlistStore from "../../store/watchlistStore";
+import useAuthStore from "../../store/authStore";
 
 function Sidebar({ onCloseMobile }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { alerts } = useAlertStore();
   const { watchlist } = useWatchlistStore();
+  const logout = useAuthStore((state) => state.logout);
 
   const activeAlertsCount = alerts?.filter((a) => !a.triggered).length || 0;
   const watchlistCount = watchlist?.length || 0;
@@ -93,9 +95,8 @@ function Sidebar({ onCloseMobile }) {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/";
+    logout();
+    navigate("/");
   };
 
   const handleItemClick = (item) => {

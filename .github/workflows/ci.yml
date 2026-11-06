@@ -39,6 +39,7 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npm audit --omit=dev --audit-level=high
+      - run: npm test
       - run: npm run build
       # Existing lint debt is reported but not yet blocking; flip this once the backlog is cleared.
       - run: npm run lint
@@ -59,6 +60,15 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - run: npm ci
       - run: npm audit --omit=dev --audit-level=high
+      - uses: actions/cache@v4
+        with:
+          path: .mongo-binaries
+          key: mongodb-7.0.21-${{ runner.os }}
+      - name: API and unit tests
+        env:
+          MONGOMS_VERSION: "7.0.21"
+          MONGOMS_DOWNLOAD_DIR: ${{ github.workspace }}/.mongo-binaries
+        run: npm test
       - name: Syntax check
         run: find . -name '*.js' -not -path './node_modules/*' -print0 | xargs -0 -n1 node --check
       - name: Load every route module
