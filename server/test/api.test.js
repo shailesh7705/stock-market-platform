@@ -55,7 +55,8 @@ function installYahoo() {
     return Array.isArray(input) ? rows : rows[0];
   };
   yahoo.quoteSummary = async () => ({
-    summaryDetail: { payoutRatio: 0.3, trailingPE: 20, dividendYield: 0.012 },
+    price: { regularMarketPrice: 100, regularMarketChange: 1.5, regularMarketChangePercent: 0.015, shortName: "Reliance Industries", longName: "Reliance Industries Ltd", marketCap: 2e12 },
+    summaryDetail: { payoutRatio: 0.3, trailingPE: 20, dividendYield: 0.012, fiftyTwoWeekHigh: 120, fiftyTwoWeekLow: 80 },
     financialData: {
       currentPrice: 100,
       returnOnEquity: 0.18,
@@ -64,16 +65,75 @@ function installYahoo() {
       revenueGrowth: 0.1,
       operatingMargins: 0.2,
       profitMargins: 0.15,
-      debtToEquity: 0.4,
+      debtToEquity: 40,
     },
     defaultKeyStatistics: { trailingPE: 22, priceToBook: 4, pegRatio: 1.2 },
     assetProfile: { sector: "Technology", industry: "Software", longBusinessSummary: "A company." },
     recommendationTrend: { trend: [{ strongBuy: 2, buy: 3, hold: 1, sell: 0, strongSell: 0 }] },
+    incomeStatementHistory: {
+      incomeStatementHistory: [
+        { endDate: new Date("2024-03-31"), totalRevenue: 1000000000, operatingIncome: 250000000, ebit: 250000000, netIncome: 180000000, dilutedEPS: 18 },
+        { endDate: new Date("2023-03-31"), totalRevenue: 850000000, operatingIncome: 200000000, ebit: 200000000, netIncome: 140000000, dilutedEPS: 14 },
+      ],
+    },
+    incomeStatementHistoryQuarterly: {
+      incomeStatementHistory: [
+        { endDate: new Date("2024-12-31"), totalRevenue: 280000000, operatingIncome: 70000000, ebit: 70000000, netIncome: 50000000, dilutedEPS: 5 },
+      ],
+    },
+    balanceSheetHistory: {
+      balanceSheetStatements: [
+        { endDate: new Date("2024-03-31"), totalAssets: 1500000000, totalCurrentLiabilities: 300000000, totalStockholderEquity: 900000000, totalDebt: 200000000 },
+      ],
+    },
+    balanceSheetHistoryQuarterly: {
+      balanceSheetStatements: [
+        { endDate: new Date("2024-12-31"), totalAssets: 1600000000, totalCurrentLiabilities: 320000000, totalStockholderEquity: 950000000, totalDebt: 180000000 },
+      ],
+    },
+    cashflowStatementHistory: {
+      cashflowStatements: [
+        { endDate: new Date("2024-03-31"), totalCashFromOperatingActivities: 220000000, capitalExpenditures: -50000000 },
+      ],
+    },
+    cashflowStatementHistoryQuarterly: {
+      cashflowStatements: [
+        { endDate: new Date("2024-12-31"), totalCashFromOperatingActivities: 60000000, capitalExpenditures: -15000000 },
+      ],
+    },
+    majorHoldersBreakdown: {
+      insidersPercentHeld: 0.50,
+      institutionsPercentHeld: 0.32,
+    },
+    calendarEvents: {
+      earnings: { earningsDate: [new Date("2025-02-15")] },
+      exDividendDate: new Date("2025-01-20"),
+    },
   });
   yahoo.chart = async () => ({
-    quotes: Array.from({ length: 30 }, (_, index) => ({ close: 90 + index })),
+    quotes: Array.from({ length: 30 }, (_, index) => ({ date: new Date(Date.now() - (30 - index) * 86400000), close: 90 + index })),
+    events: {
+      dividends: {
+        "1": { amount: 15, date: 1725000000 },
+      },
+      splits: {
+        "1": { numerator: 2, denominator: 1, date: 1690000000 },
+      },
+    },
   });
-  yahoo.search = async () => ({ quotes: [] });
+  yahoo.search = async () => ({
+    quotes: [],
+    news: [
+      {
+        uuid: "news-1",
+        title: "Reliance Surges on Strong Quarterly Earnings Growth",
+        publisher: "Mint",
+        link: "https://example.com/news/1",
+        providerPublishTime: 1731000000,
+        type: "news",
+      },
+    ],
+  });
 }
 
 async function loginAs(email, name) {
@@ -431,4 +491,116 @@ test("stockpulse api", async (t) => {
     assert.equal(resetRes.status, 200);
   });
 
+  await t.test("sprint 15 research depth: financials, shareholding, events, news, screener, compare", async () => {
+    // 1. Financial Statements (SP-35)
+    const finRes = await request(app).get("/api/stocks/RELIANCE.NS/financials?period=annual");
+    assert.equal(finRes.status, 200);
+    assert.ok(Array.isArray(finRes.body.incomeStatements));
+    assert.ok(Array.isArray(finRes.body.balanceSheets));
+    assert.ok(Array.isArray(finRes.body.cashFlowStatements));
+    assert.ok(finRes.body.summary);
+    assert.ok(finRes.body.summary.roce !== undefined);
+
+    const finQRes = await request(app).get("/api/stocks/RELIANCE.NS/financials?period=quarterly");
+    assert.equal(finQRes.status, 200);
+    assert.equal(finQRes.body.period, "quarterly");
+
+    // 2. Shareholding Pattern & Trend (SP-36)
+    const shRes = await request(app).get("/api/stocks/RELIANCE.NS/shareholding");
+    assert.equal(shRes.status, 200);
+    assert.ok(Array.isArray(shRes.body.quarters));
+    assert.ok(shRes.body.quarters.length >= 4);
+    assert.ok(shRes.body.quarters[0].promoter > 0);
+    assert.ok(Array.isArray(shRes.body.insights));
+
+    // 3. Corporate Actions & Events Calendar (SP-37)
+    const stockEvents = await request(app).get("/api/stocks/RELIANCE.NS/events");
+    assert.equal(stockEvents.status, 200);
+    assert.ok(Array.isArray(stockEvents.body.dividends));
+    assert.ok(Array.isArray(stockEvents.body.splits));
+
+    const marketEvents = await request(app).get("/api/events");
+    assert.equal(marketEvents.status, 200);
+    assert.ok(Array.isArray(marketEvents.body.events));
+
+    const divEvents = await request(app).get("/api/events?type=dividend");
+    assert.equal(divEvents.status, 200);
+    assert.ok(divEvents.body.events.every((e) => e.type === "dividend"));
+
+    // 4. Per-Stock News & Announcements (SP-38)
+    const newsRes = await request(app).get("/api/news/RELIANCE");
+    assert.equal(newsRes.status, 200);
+    assert.ok(Array.isArray(newsRes.body.news));
+    assert.ok(newsRes.body.news.length > 0);
+    assert.ok(newsRes.body.news[0].title);
+    assert.ok(newsRes.body.news[0].sentiment);
+
+    // 5. Full-Universe Screener & Saved Screens (SP-39)
+    const screenerRes = await request(app)
+      .post("/api/screener/query")
+      .send({
+        filters: { roe: { min: 10 } },
+        sortBy: "marketCap",
+        sortOrder: "desc",
+        page: 1,
+        limit: 20,
+      });
+    assert.equal(screenerRes.status, 200);
+    assert.ok(Array.isArray(screenerRes.body.data));
+    assert.ok(screenerRes.body.total >= 0);
+    assert.ok(screenerRes.body.executionTimeMs >= 0);
+    const warmQuery = await request(app)
+      .post("/api/screener/query")
+      .send({ sortBy: "marketCap", page: 1, limit: 10 });
+    assert.equal(warmQuery.status, 200);
+    assert.ok(warmQuery.body.executionTimeMs < 500);
+
+    // Test CSV export
+    const csvRes = await request(app)
+      .post("/api/screener/query")
+      .send({ format: "csv" });
+    assert.equal(csvRes.status, 200);
+    assert.ok(csvRes.headers["content-type"].includes("text/csv"));
+    assert.ok(csvRes.text.includes("Symbol,Company Name"));
+
+    const presetsRes = await request(app).get("/api/screener/presets");
+    assert.equal(presetsRes.status, 200);
+    assert.ok(Array.isArray(presetsRes.body.presets));
+    assert.ok(presetsRes.body.presets.length >= 4);
+
+    // Saved Screen CRUD
+    const screenUserToken = await loginAs("screenuser@example.com", "Screen User");
+    const saveRes = await request(app)
+      .post("/api/screener/saved")
+      .set("Authorization", `Bearer ${screenUserToken}`)
+      .send({
+        name: "My Custom Screen",
+        filters: { roe: { min: 15 }, pe: { max: 25 } },
+        sortBy: "roe",
+      });
+    assert.equal(saveRes.status, 201);
+    assert.ok(saveRes.body.screen._id);
+
+    const getSaved = await request(app)
+      .get("/api/screener/saved")
+      .set("Authorization", `Bearer ${screenUserToken}`);
+    assert.equal(getSaved.status, 200);
+    assert.equal(getSaved.body.screens.length, 1);
+
+    const delSaved = await request(app)
+      .delete(`/api/screener/saved/${saveRes.body.screen._id}`)
+      .set("Authorization", `Bearer ${screenUserToken}`);
+    assert.equal(delSaved.status, 200);
+
+    // 6. Compare Up to 4 Stocks (SP-40)
+    const compareRes = await request(app).get("/api/stocks/compare?symbols=RELIANCE,TCS");
+    assert.equal(compareRes.status, 200);
+    assert.equal(compareRes.body.stocks.length, 2);
+    assert.ok(compareRes.body.highlights);
+    assert.ok(compareRes.body.stocks[0].valuation);
+    assert.ok(compareRes.body.stocks[0].profitability);
+    assert.ok(compareRes.body.stocks[0].health);
+    assert.ok(compareRes.body.stocks[0].pulseScore);
+    assert.ok(Array.isArray(compareRes.body.stocks[0].chart));
+  });
 });

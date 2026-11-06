@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Scale } from "lucide-react";
 import { getPeerComparison } from "../../services/stockService";
 
 const METRICS = [
@@ -61,6 +63,15 @@ export default function PeerComparisonMatrix({ symbol }) {
           <h2 className="text-lg font-extrabold text-white">Peer Comparison</h2>
           <p className="text-xs text-gray-400 mt-1">{data?.industry || "Same-industry rivals"}</p>
         </div>
+        {peers.length >= 2 && (
+          <Link
+            to={`/compare?symbols=${peers.map((p) => p.symbol.replace(".NS", "")).slice(0, 4).join(",")}`}
+            className="px-3.5 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-xs font-bold text-blue-400 hover:text-blue-300 transition-all flex items-center gap-1.5"
+          >
+            <Scale size={13} />
+            Side-by-Side Compare →
+          </Link>
+        )}
       </div>
       {loading ? (
         <p className="text-sm text-gray-400">Loading sector rivals…</p>

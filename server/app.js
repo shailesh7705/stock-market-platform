@@ -15,6 +15,8 @@ const newsRoutes = require("./routes/newsRoutes");
 const portfolioRoutes = require("./routes/portfolioRoutes");
 const streamRoutes = require("./routes/streamRoutes");
 const marketRoutes = require("./routes/marketRoutes");
+const eventsRoutes = require("./routes/eventsRoutes");
+const screenerRoutes = require("./routes/screenerRoutes");
 const { apiLimiter } = require("./middleware/rateLimiters");
 const { isMarketOpen } = require("./utils/marketHours");
 const { getAlertEngineHealth } = require("./utils/alertEngine");
@@ -145,6 +147,8 @@ function createApp() {
   app.use("/api/news", newsRoutes);
   app.use("/api/portfolio", portfolioRoutes);
   app.use("/api/market", marketRoutes);
+  app.use("/api/events", eventsRoutes);
+  app.use("/api/screener", screenerRoutes);
 
   // Enhanced Health & Observability Endpoint
   app.get(["/", "/api/health"], (req, res) => {
