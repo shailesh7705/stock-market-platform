@@ -1,29 +1,20 @@
 // client/src/components/ProtectedRoute.jsx
+import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-
-function isTokenValid(token) {
-  if (!token || typeof token !== "string") return false;
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return false;
-    const payload = JSON.parse(atob(parts[1]));
-    if (payload.exp && Date.now() >= payload.exp * 1000) {
-      return false; // Token has expired
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
+import useAuthStore from "../store/authStore";
+import { isTokenValid } from "../utils/authToken";
 
 function ProtectedRoute({ children }) {
-  const token = localStorage.getItem("token");
+  const token = useAuthStore((state) => state.token);
+  const logout = useAuthStore((state) => state.logout);
   const location = useLocation();
+  const valid = isTokenValid(token);
 
-  if (!token || !isTokenValid(token)) {
-    // Clear dead session
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  useEffect(() => {
+    if (!valid && token) logout();
+  }, [valid, token, logout]);
+
+  if (!valid) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

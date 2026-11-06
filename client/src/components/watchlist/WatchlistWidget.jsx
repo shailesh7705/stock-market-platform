@@ -2,7 +2,7 @@
 import Card from "../ui/Card";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparklines, SparklinesLine } from "react-sparklines";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getWatchlist, removeFromWatchlist } from "../../services/watchlistService";
 import { getLiveStocks } from "../../services/stockService";
@@ -18,6 +18,8 @@ function cleanSymbol(sym = "") {
 
 function WatchlistWidget() {
   const { watchlist, setWatchlist, removeStock } = useWatchlistStore();
+  const watchlistRef = useRef(watchlist);
+  watchlistRef.current = watchlist;
   const [loading, setLoading] = useState(true);
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState(null);
@@ -28,11 +30,13 @@ function WatchlistWidget() {
   }, []);
 
   useEffect(() => {
-    if (!watchlist?.length) return;
-    fetchLivePrices();
-    const interval = setInterval(fetchLivePrices, 15000);
+    const refresh = () => {
+      if (watchlistRef.current?.length) fetchLivePrices();
+    };
+    refresh();
+    const interval = setInterval(refresh, 15000);
     return () => clearInterval(interval);
-  }, [watchlist.length]);
+  }, []);
 
   const fetchWatchlist = async () => {
     try {
@@ -47,9 +51,10 @@ function WatchlistWidget() {
 
   const fetchLivePrices = async () => {
     try {
-      const symbols = watchlist.map((s) => s.symbol);
+      const current = watchlistRef.current || [];
+      const symbols = current.map((s) => s.symbol);
       const liveData = await getLiveStocks(symbols);
-      const updated = watchlist.map((stock) => {
+      const updated = current.map((stock) => {
         const live = liveData.find((item) => item.symbol === stock.symbol);
         if (!live) return stock;
         return {
@@ -158,12 +163,14 @@ function WatchlistWidget() {
 
                     {/* Sparkline mini chart */}
                     <div className="w-16 h-7 shrink-0 mx-2 hidden sm:block">
-                      <Sparklines data={stock.data || [20, 25, 22, 30, 28, 35]} margin={2}>
-                        <SparklinesLine
-                          color={stock.positive ? "#10b981" : "#f43f5e"}
-                          style={{ fill: "none", strokeWidth: 2 }}
-                        />
-                      </Sparklines>
+                      {Array.isArray(stock.data) && stock.data.length > 1 ? (
+                        <Sparklines data={stock.data} margin={2}>
+                          <SparklinesLine
+                            color={stock.positive ? "#10b981" : "#f43f5e"}
+                            style={{ fill: "none", strokeWidth: 2 }}
+                          />
+                        </Sparklines>
+                      ) : null}
                     </div>
 
                     {/* Price and actions */}

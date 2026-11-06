@@ -37,7 +37,11 @@ function Login({ isModal = false, onSwitchToSignup }) {
       const data = await loginUser({ email, password });
       setAuth(data.user, data.token);
       toast.success(`Welcome back, ${data.user?.name || "Investor"}!`, { icon: "👋" });
-      navigate("/dashboard");
+      const from = location.state?.from;
+      const next = from?.pathname && from.pathname !== "/login"
+        ? `${from.pathname}${from.search || ""}`
+        : "/dashboard";
+      navigate(next, { replace: true });
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Invalid email or password");

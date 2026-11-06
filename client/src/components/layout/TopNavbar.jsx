@@ -55,13 +55,14 @@ export default function TopNavbar({ onOpenMobileMenu }) {
   const [expandedNoteId, setExpandedNoteId] = useState(null);
   const [soundOn, setSoundOn] = useState(alertSoundEnabled);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [indicesStale, setIndicesStale] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
 
   const { alerts } = useAlertStore();
   const { watchlist } = useWatchlistStore();
-  const { user, patchUser } = useAuthStore();
+  const { user, patchUser, logout } = useAuthStore();
   const { notifications, setNotifications, liveConnected } = useNotificationStore();
 
   const profileRef = useRef(null);
@@ -89,8 +90,11 @@ export default function TopNavbar({ onOpenMobileMenu }) {
 
   useEffect(() => {
     const onIndices = (event) => {
-      if (Array.isArray(event.detail) && event.detail.length > 0) {
-        setMarketData(event.detail);
+      const detail = event.detail;
+      const rows = Array.isArray(detail) ? detail : detail?.data;
+      if (Array.isArray(rows) && rows.length > 0) {
+        setMarketData(rows);
+        setIndicesStale(Boolean(detail?.stale));
       }
     };
     window.addEventListener("stockpulse:indices", onIndices);
@@ -107,9 +111,11 @@ export default function TopNavbar({ onOpenMobileMenu }) {
 
   const fetchMarketData = async () => {
     try {
-      const data = await getMarketIndices();
-      if (Array.isArray(data) && data.length > 0) {
-        setMarketData(data);
+      const payload = await getMarketIndices();
+      const rows = Array.isArray(payload) ? payload : payload?.data;
+      if (Array.isArray(rows) && rows.length > 0) {
+        setMarketData(rows);
+        setIndicesStale(Boolean(payload?.stale));
       }
     } catch (err) {
       console.error(err);
@@ -140,9 +146,8 @@ export default function TopNavbar({ onOpenMobileMenu }) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/";
+    logout();
+    navigate("/");
   };
 
   const formattedTime = currentTime.toLocaleTimeString("en-IN", {
@@ -286,6 +291,11 @@ export default function TopNavbar({ onOpenMobileMenu }) {
         {/* ── Zone 3: Market Status & User Controls ── */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <MarketStatusPill />
+          {indicesStale ? (
+            <span className="hidden md:inline text-[10px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
+              Delayed
+            </span>
+          ) : null}
           {/* Live Market Indices Ticker (Desktop / Wide screens) */}
           <div className="hidden xl:flex items-center gap-2 pr-2 border-r border-white/[0.08]">
             {marketData.slice(0, 1).map((market) => (
@@ -306,7 +316,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                 >
                   {market.positive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                   {market.change >= 0 ? "+" : ""}
-                  {market.change ? market.change.toFixed(2) : "0.00"}%
+                  {Number.isFinite(Number(market.change)) ? Number(market.change).toFixed(2) : "0.00"}%
                 </span>
               </div>
             ))}
@@ -330,7 +340,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                 >
                   {market.positive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                   {market.change >= 0 ? "+" : ""}
-                  {market.change ? market.change.toFixed(2) : "0.00"}%
+                  {Number.isFinite(Number(market.change)) ? Number(market.change).toFixed(2) : "0.00"}%
                 </span>
               </div>
             ))}

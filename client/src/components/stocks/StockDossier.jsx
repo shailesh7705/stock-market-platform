@@ -1,5 +1,5 @@
 // client/src/components/stocks/StockDossier.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import Card from "../ui/Card";
 import {
   Award,
@@ -27,8 +27,6 @@ import {
   X,
   Send,
 } from "lucide-react";
-import { calculatePulseScore } from "../../utils/pulseScore";
-import { calculateForecast } from "../../utils/forecastEngine";
 import StockForecastCard from "./StockForecastCard";
 import toast from "react-hot-toast";
 
@@ -93,18 +91,8 @@ export default function StockDossier({ details, livePrice }) {
   const [showFullSummary, setShowFullSummary] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
-  // Recalculate pulse score if live price moves or use server computed
-  const pulseScore = useMemo(() => {
-    if (!details) return null;
-    const currentPrice = livePrice || details.price || 0;
-    return calculatePulseScore(details, currentPrice);
-  }, [details, livePrice]);
-
-  const shareForecast = useMemo(() => {
-    if (!details) return null;
-    const price = Number(livePrice || details.price || 0);
-    return calculateForecast(details, price, pulseScore);
-  }, [details, livePrice, pulseScore]);
+  const pulseScore = details?.pulseScore || null;
+  const shareForecast = details?.forecast || null;
 
   if (!details) return null;
 

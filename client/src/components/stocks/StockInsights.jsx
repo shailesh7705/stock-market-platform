@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 
 function formatIndianNumber(val) {
-  if (!val || isNaN(val)) return "—";
+  if (val === undefined || val === null || Number.isNaN(Number(val))) return "—";
+  if (Number(val) === 0) return "0";
   if (val >= 10000000) {
     const cr = val / 10000000;
     if (cr >= 100000) {

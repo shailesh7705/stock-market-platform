@@ -1,5 +1,5 @@
 // client/src/pages/Home.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   TrendingUp,
   X,
@@ -17,6 +17,9 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import Login from "./Login";
 import Signup from "./Signup";
+import useAuthStore from "../store/authStore";
+import { isTokenValid } from "../utils/authToken";
+import { getMarketIndices } from "../services/marketService";
 
 function Home() {
   const [openModal, setOpenModal] = useState(false);
@@ -32,7 +35,39 @@ function Home() {
     setOpenModal(true);
   };
 
-  const token = localStorage.getItem("token");
+  const token = useAuthStore((state) => state.token);
+  const signedIn = isTokenValid(token);
+  const [ticker, setTicker] = useState(null);
+  const [tickerStale, setTickerStale] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getMarketIndices()
+      .then((payload) => {
+        if (!active || !payload?.data?.length) return;
+        setTicker(payload.data);
+        setTickerStale(Boolean(payload.stale));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const sampleTicker = [
+    { sym: "NIFTY 50", price: "₹22,696.80", change: "-0.25%", isPos: false },
+    { sym: "SENSEX", price: "₹73,393.20", change: "-0.29%", isPos: false },
+    { sym: "RELIANCE", price: "Sample", change: "Sample", isPos: true },
+    { sym: "TCS", price: "Sample", change: "Sample", isPos: true },
+  ];
+  const tickerRows = ticker?.length
+    ? ticker.map((row) => ({
+        sym: row.name,
+        price: `₹${Number(row.price).toLocaleString("en-IN")}`,
+        change: `${row.change >= 0 ? "+" : ""}${Number(row.change).toFixed(2)}%`,
+        isPos: row.positive,
+      }))
+    : sampleTicker;
 
   return (
     <div className="min-h-screen bg-[#080d1a] text-white overflow-hidden flex flex-col justify-between">
@@ -76,7 +111,7 @@ function Home() {
 
           {/* Auth CTA */}
           <div className="flex items-center gap-3">
-            {token ? (
+            {signedIn ? (
               <Link
                 to="/dashboard"
                 className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-extrabold transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-1.5"
@@ -133,7 +168,7 @@ function Home() {
         {/* CTA Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
           <button
-            onClick={token ? () => navigate("/dashboard") : openSignup}
+            onClick={signedIn ? () => navigate("/dashboard") : openSignup}
             className="h-13 px-8 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-extrabold transition-all shadow-xl shadow-emerald-500/25 flex items-center gap-2 group"
           >
             Start Free Tracking
@@ -152,12 +187,12 @@ function Home() {
         {/* Live Ticker Bar */}
         <div className="w-full max-w-5xl bg-[#0e1626]/80 border border-white/[0.08] rounded-2xl p-4 backdrop-blur-xl">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-left">
-            {[
-              { sym: "NIFTY 50", price: "₹22,696.80", change: "-0.25%", isPos: false },
-              { sym: "SENSEX", price: "₹73,393.20", change: "-0.29%", isPos: false },
-              { sym: "RELIANCE", price: "₹1,192.90", change: "+1.40%", isPos: true },
-              { sym: "TCS", price: "₹2,496.50", change: "+0.85%", isPos: true },
-            ].map((idx) => (
+            {(tickerStale || !ticker) && (
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300 mb-3">
+                {ticker ? "Delayed" : "Sample"}
+              </p>
+            )}
+            {tickerRows.map((idx) => (
               <div key={idx.sym} className="p-3 bg-[#080d1a] border border-white/[0.05] rounded-xl">
                 <span className="text-[10px] text-gray-400 font-bold uppercase">{idx.sym}</span>
                 <p className="text-[15px] font-extrabold text-white mt-0.5 font-mono tabular-nums">{idx.price}</p>

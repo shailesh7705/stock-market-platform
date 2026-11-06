@@ -14,7 +14,8 @@ const { toPercent, debtToEquityRatio, sma, rsi, cagr, mapPool } = require("../ut
 const { getMarketSession } = require("../utils/marketHours");
 
 const YF_OPTS = { validateResult: false };
-const { getCache, setCache } = require("../utils/memoryCache");
+const { getCache, setCache, remember, recall } = require("../utils/memoryCache");
+const { sparklinesFor } = require("../utils/sparklines");
 
 // ─── Load Local NSE Stocks for Instant Search ─────────────────────────────────
 let localStocks = [];
@@ -28,6 +29,12 @@ try {
 }
 
 // ─── Dividend Yield Normalizer ────────────────────────────────────────────────
+function payoutPercent(raw) {
+  if (raw === null || raw === undefined || !Number.isFinite(Number(raw)) || Number(raw) <= 0) return null;
+  const num = Number(raw);
+  return Number((num <= 1.5 ? num * 100 : num).toFixed(1));
+}
+
 function parseDividendYield(raw) {
   if (raw === null || raw === undefined || isNaN(raw) || Number(raw) <= 0) return null;
   const num = Number(raw);
@@ -108,23 +115,27 @@ function getIndianMarketSession() {
     session: session.holiday ? "Market Holiday" : SESSION_LABELS[session.phase],
     timezone: "IST (UTC+5:30)",
     exchange: "NSE",
-    serverTime: now.toISOString(),
+    serverTime: new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "medium",
+      timeStyle: "medium",
+    }).format(now),
     istTime: now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
   };
 }
 
-// ─── Fallback Indices if Yahoo API has hiccups ────────────────────────────────
-const FALLBACK_INDICES = [
-  { symbol: "^NSEI", name: "NIFTY 50", price: 22710.25, change: 0.15, positive: true },
-  { symbol: "^BSESN", name: "SENSEX", price: 73385.50, change: 0.18, positive: true },
-];
+function indexPayload(rows, stale, asOf) {
+  return { data: rows, stale, asOf: asOf || null };
+}
 
 // ─── GET /api/stocks/indices ──────────────────────────────────────────────────
 const getMarketIndices = async (req, res) => {
-  try {
-    const cached = getCache("indices");
-    if (cached) return res.json(cached);
+  const cached = recall("indices");
+  if (cached && !cached.stale) {
+    return res.json(indexPayload(cached.data, false, cached.asOf));
+  }
 
+  try {
     const raw = await safeQuote(["^NSEI", "^BSESN"], 6000);
     const results = Array.isArray(raw) ? raw : raw ? [raw] : [];
 
@@ -144,21 +155,20 @@ const getMarketIndices = async (req, res) => {
     }
 
     if (data.length > 0) {
-      setCache("indices", data, 45 * 1000);
-      return res.json(data);
+      const saved = remember("indices", data, 45 * 1000);
+      return res.json(indexPayload(data, false, saved.asOf));
     }
-
-    // Return stale cache if available, else fallback
-    const stale = getCache("indices");
-    if (stale && stale.length > 0) return res.json(stale);
-
-    return res.json(FALLBACK_INDICES);
   } catch (error) {
     console.error("[Indices] Error:", error.message);
-    const stale = getCache("indices");
-    if (stale) return res.json(stale);
-    return res.json(FALLBACK_INDICES);
   }
+
+  if (cached?.data?.length) {
+    return res.json(indexPayload(cached.data, true, cached.asOf));
+  }
+  return res.status(503).json({
+    message: "Index quotes are unavailable",
+    ...indexPayload([], true, null),
+  });
 };
 
 // ─── GET /api/stocks/movers ───────────────────────────────────────────────────
@@ -195,12 +205,6 @@ function transformQuote(q, categoryName) {
   const dayHigh = q.regularMarketDayHigh ? parseFloat(q.regularMarketDayHigh.toFixed(2)) : price;
   const dayLow = q.regularMarketDayLow ? parseFloat(q.regularMarketDayLow.toFixed(2)) : price;
 
-  // Generate 5-point realistic session trajectory sparkline
-  const mid = (dayHigh + dayLow) / 2;
-  const s1 = parseFloat((dayLow + (mid - dayLow) * 0.4).toFixed(2));
-  const s2 = parseFloat((mid + (changePct >= 0 ? 0.2 : -0.2) * (dayHigh - dayLow)).toFixed(2));
-  const s3 = parseFloat(((s2 + price) / 2).toFixed(2));
-
   return {
     symbol: q.symbol,
     ticker: q.symbol.replace(".NS", "").replace(".BO", ""),
@@ -216,14 +220,17 @@ function transformQuote(q, categoryName) {
     dayHigh,
     dayLow,
     prevClose: q.regularMarketPreviousClose ? parseFloat(q.regularMarketPreviousClose.toFixed(2)) : null,
-    sparkline: [dayLow, s1, mid, s2, s3, price],
+    sparkline: null,
   };
 }
 
 const getMarketMovers = async (req, res) => {
+  const cached = recall("movers");
+  if (cached && !cached.stale) {
+    return res.json({ ...cached.data, stale: false, asOf: cached.asOf });
+  }
+
   try {
-    const cached = getCache("movers_categorized");
-    if (cached) return res.json(cached);
 
     const allSymbols = [...LARGE_CAP_SYMBOLS, ...MID_CAP_SYMBOLS, ...SMALL_CAP_SYMBOLS];
     const raw = await safeQuote(allSymbols, 12000);
@@ -280,12 +287,19 @@ const getMarketMovers = async (req, res) => {
       stocks: [...largeCap.all, ...midCap.all, ...smallCap.all],
     };
 
-    setCache("movers_categorized", payload, 60 * 1000);
-    return res.json(payload);
+    const lines = await sparklinesFor(payload.stocks.map((stock) => stock.symbol));
+    for (const stock of payload.stocks) {
+      const points = lines.get(stock.symbol);
+      stock.sparkline = points?.length >= 2 ? points : null;
+    }
+
+    const saved = remember("movers", payload, 60 * 1000);
+    return res.json({ ...payload, stale: false, asOf: saved.asOf });
   } catch (error) {
     console.error("[Movers] Error:", error.message);
-    const stale = getCache("movers_categorized");
-    if (stale) return res.json(stale);
+    if (cached?.data) {
+      return res.json({ ...cached.data, stale: true, asOf: cached.asOf });
+    }
     res.status(500).json({ message: "Failed to fetch movers" });
   }
 };
@@ -533,11 +547,25 @@ async function fetchSingleStockDetails(rawSymbol) {
       ),
       new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000)),
     ]),
-    safeQuote(symbol, 6000),
+    Promise.race([
+      yahooFinance.quote(symbol, {}, YF_OPTS),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 6000)),
+    ]),
   ]);
 
   const summary = summaryResult.status === "fulfilled" ? (summaryResult.value || {}) : {};
   const quote = quoteResult.status === "fulfilled" ? quoteResult.value : null;
+  const unknownQuote = (error) =>
+    /no data found|not found|invalid symbol|delisted|quote not found/i.test(String(error?.message || ""));
+
+  if (!Number(quote?.regularMarketPrice)) {
+    const notFound = unknownQuote(quoteResult.reason)
+      || unknownQuote(summaryResult.reason)
+      || quoteResult.status === "fulfilled";
+    const failure = new Error(notFound ? "Symbol not found" : "Market data is temporarily unavailable");
+    failure.status = notFound ? 404 : 503;
+    throw failure;
+  }
 
   const assetProfile = summary.assetProfile || {};
   const financialData = summary.financialData || {};
@@ -614,6 +642,7 @@ async function fetchSingleStockDetails(rawSymbol) {
     exchange: quote?.fullExchangeName || "NSE",
     dividendYield,
     annualDividendPerShare,
+    payoutRatio: payoutPercent(summaryDetail.payoutRatio),
     assetProfile: {
       sector: assetProfile.sector || "N/A",
       industry: assetProfile.industry || "N/A",
@@ -680,11 +709,15 @@ const getStockDetails = async (req, res) => {
 
     const details = await fetchSingleStockDetails(symbol);
     if (!details) {
-      return res.status(404).json({ message: `Could not retrieve details for ${symbol}` });
+      return res.status(404).json({ message: "Symbol not found" });
     }
 
     return res.json(details);
   } catch (error) {
+    if (error.status === 404) return res.status(404).json({ message: "Symbol not found" });
+    if (error.status === 503) {
+      return res.status(503).json({ message: "Market data is temporarily unavailable" });
+    }
     console.error("[StockDetails] Error:", error.message);
     return res.status(500).json({ message: "Failed to fetch stock details" });
   }
@@ -728,7 +761,6 @@ function researchMetrics(details) {
     : null;
   const trailingPE = details.valuation?.stockPE ?? details.defaultKeyStatistics?.trailingPE ?? null;
   const dividendYield = details.dividendYield ?? null;
-  const payoutRatio = trailingPE && dividendYield ? Number((dividendYield * trailingPE).toFixed(1)) : null;
   const solvencyScore = details.pulseScore?.pillars?.pillar2_solvency?.score ?? null;
   const price = Number(details.price) || 0;
   const high = Number(details.fiftyTwoWeekHigh) || 0;
@@ -746,18 +778,17 @@ function researchMetrics(details) {
     priceToBook: details.defaultKeyStatistics?.priceToBook ?? null,
     pegRatio: details.valuation?.pegRatio ?? details.defaultKeyStatistics?.pegRatio ?? null,
     roe: toPercent(details.financialData?.returnOnEquity),
-    roce: toPercent(details.financialData?.returnOnAssets),
+    roa: toPercent(details.financialData?.returnOnAssets),
     operatingMargin: toPercent(details.financialData?.operatingMargins),
     debtToEquity: debtToEquityRatio(details.financialData?.debtToEquity),
     interestCoverage: null,
     dividendYield,
-    payoutRatio,
+    payoutRatio: details.payoutRatio ?? null,
     solvencyScore,
     oneYearReturn: details.fiftyTwoWeekChangePercent ?? null,
     earningsGrowth: toPercent(details.financialData?.earningsGrowth),
     revenueGrowth: toPercent(details.financialData?.revenueGrowth),
-    profitGrowth: [toPercent(details.financialData?.earningsGrowth), toPercent(details.financialData?.revenueGrowth)]
-      .some((value) => value !== null && Number(value) > 0),
+    profitGrowth: toPercent(details.financialData?.earningsGrowth),
     buyConsensus,
     nearHigh: price > 0 && high > 0 ? price >= high * 0.95 : false,
   };

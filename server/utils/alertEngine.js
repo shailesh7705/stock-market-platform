@@ -206,3 +206,4 @@ const startAlertEngine = () => {
 };
 
 module.exports = startAlertEngine;
+module.exports.checkAlerts = checkAlerts;

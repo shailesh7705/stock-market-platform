@@ -23,8 +23,12 @@ function CreateAlertModal({ open, onClose, stock, onAlertCreated }) {
   );
 
   useEffect(() => {
+    if (open) return;
+    setTargetPrice("");
+    setNotes("");
+    setCondition("above");
     setConflict(null);
-  }, [condition, targetPrice, open]);
+  }, [open]);
 
   useEffect(() => {
     if (open && currentPriceNumeric > 0 && !targetPrice) {
@@ -286,7 +290,10 @@ function CreateAlertModal({ open, onClose, stock, onAlertCreated }) {
                   <p className="text-[12px] leading-relaxed text-amber-100">{conflict.message}</p>
                   <button
                     type="button"
-                    onClick={() => setCondition(conflict.suggestedCondition)}
+                    onClick={() => {
+                      setCondition(conflict.suggestedCondition);
+                      setConflict(null);
+                    }}
                     className="mt-2 text-[12px] font-bold text-amber-300 hover:text-amber-200"
                   >
                     Switch to {conflict.suggestedCondition === "below" ? "Drops Below" : "Rises Above"}

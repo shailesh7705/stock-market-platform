@@ -131,8 +131,12 @@ export default function MarketMovers() {
                 <h2 className="text-lg font-black text-white tracking-tight">
                   Today's Top Movers
                 </h2>
-                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                  NSE Realtime
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  data?.stale
+                    ? "text-amber-300 bg-amber-500/10 border-amber-500/30"
+                    : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                }`}>
+                  {data?.stale ? "Delayed" : "NSE Realtime"}
                 </span>
               </div>
               <p className="text-xs text-gray-400 mt-0.5">
@@ -342,7 +346,7 @@ export default function MarketMovers() {
                           >
                             {isPositive ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                             {isPositive ? "+" : ""}
-                            {stock.change ? stock.change.toFixed(2) : "0.00"}%
+                            {Number.isFinite(Number(stock.change)) ? Number(stock.change).toFixed(2) : "0.00"}%
                           </div>
                           {stock.changeAmount !== undefined && (
                             <p className="text-[10px] text-gray-400 font-mono mt-0.5">
@@ -430,7 +434,7 @@ export default function MarketMovers() {
                           }`}
                         >
                           {isPositive ? "+" : ""}
-                          {stock.change ? stock.change.toFixed(2) : "0.00"}%
+                          {Number.isFinite(Number(stock.change)) ? Number(stock.change).toFixed(2) : "0.00"}%
                         </div>
                       </div>
                     </div>

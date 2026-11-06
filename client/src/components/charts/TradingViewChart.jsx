@@ -189,7 +189,8 @@ function formatINR(val) {
 }
 
 function formatVolume(val) {
-  if (!val || isNaN(val)) return "—";
+  if (val === undefined || val === null || Number.isNaN(Number(val))) return "—";
+  if (Number(val) === 0) return "0";
   if (val >= 10000000) return `${(val / 10000000).toFixed(2)} Cr`;
   if (val >= 100000) return `${(val / 100000).toFixed(2)} L`;
   if (val >= 1000) return `${(val / 1000).toFixed(1)}k`;

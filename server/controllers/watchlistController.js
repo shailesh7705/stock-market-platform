@@ -5,6 +5,7 @@ const YahooFinance = require("yahoo-finance2").default;
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
 const YF_OPTS = { validateResult: false };
+const { sparklinesFor } = require("../utils/sparklines");
 const DEFAULT_LIST = "My Watchlist";
 
 function normalizeListName(name) {
@@ -101,7 +102,7 @@ const addToWatchlist = async (req, res) => {
       positive,
       dayHigh: quote?.regularMarketDayHigh || null,
       dayLow: quote?.regularMarketDayLow || null,
-      data: [20, 25, 22, 30, 27, 35],
+      data: [],
       listName: item.listName,
       tags: item.tags || [],
       position: item.position,
@@ -134,6 +135,7 @@ const getWatchlist = async (req, res) => {
       if (q?.symbol) quoteMap.set(q.symbol, q);
     }
 
+    const lines = await sparklinesFor(symbols);
     const formatted = watchlist.map((item) => {
       const quote = quoteMap.get(item.symbol);
       const price = quote?.regularMarketPrice || 0;
@@ -155,7 +157,7 @@ const getWatchlist = async (req, res) => {
         dayLow: quote?.regularMarketDayLow || null,
         fiftyTwoWeekHigh: quote?.fiftyTwoWeekHigh || null,
         fiftyTwoWeekLow: quote?.fiftyTwoWeekLow || null,
-        data: [20, 25, 22, 30, 27, 35],
+        data: lines.get(item.symbol) || [],
         listName: item.listName || DEFAULT_LIST,
         tags: item.tags || [],
         position: item.position || 0,
