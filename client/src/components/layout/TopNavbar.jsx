@@ -218,7 +218,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
   ];
 
   return (
-    <header className="no-print sticky top-0 z-50 h-16 w-full overflow-hidden border-b border-white/[0.08] bg-[#080b11]/95 backdrop-blur-xl shrink-0 px-3 sm:px-6">
+    <header className="no-print sticky top-0 z-50 h-16 w-full border-b border-white/[0.08] bg-[#080b11]/95 backdrop-blur-xl shrink-0 px-3 sm:px-6">
       <div className="h-full max-w-7xl mx-auto flex items-center justify-between gap-3">
         {/* ── Zone 1: Logo & Nav Links (Never Compressed) ── */}
         <div className="flex items-center gap-3 lg:gap-4 shrink-0">
@@ -368,6 +368,12 @@ export default function TopNavbar({ onOpenMobileMenu }) {
             )}
           </Link>
 
+          {user ? (
+
+
+            <>
+
+
           {/* Notifications Dropdown */}
           <div className="relative" ref={notifRef}>
             <button
@@ -393,7 +399,7 @@ export default function TopNavbar({ onOpenMobileMenu }) {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.96 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-12 w-80 sm:w-96 bg-[#0e1422] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 z-50 overflow-hidden backdrop-blur-xl"
+                  className="absolute right-0 top-12 w-[calc(100vw-1.5rem)] sm:w-96 max-w-sm bg-[#0e1422] border border-white/10 rounded-2xl shadow-2xl shadow-black/90 z-50 overflow-hidden backdrop-blur-xl"
                 >
                   <div className="px-4 py-3 border-b border-white/[0.08] flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -555,6 +561,23 @@ export default function TopNavbar({ onOpenMobileMenu }) {
               )}
             </AnimatePresence>
           </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Link
+              to="/login"
+              className="px-3 py-1.5 rounded-xl text-xs font-bold text-gray-300 hover:text-white hover:bg-white/5 transition-all select-none"
+            >
+              Sign In
+            </Link>
+            <Link
+              to="/signup"
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black text-xs font-black shadow-md shadow-emerald-500/20 transition-all select-none whitespace-nowrap"
+            >
+              Sign Up
+            </Link>
+          </div>
+        )}
         </div>
       </div>
     </header>

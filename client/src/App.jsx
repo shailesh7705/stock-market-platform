@@ -3,6 +3,8 @@ import { lazy, Suspense, useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotificationListener from "./components/notifications/NotificationListener";
+import PulseAIChat from "./components/chat/PulseAIChat";
+import useAuthStore from "./store/authStore";
 
 const Home = lazy(() => import("./pages/Home"));
 const Login = lazy(() => import("./pages/Login"));
@@ -63,10 +65,17 @@ function OfflineBanner() {
 }
 
 function App() {
+  const fetchProfile = useAuthStore((state) => state.fetchProfile);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
   return (
     <BrowserRouter>
       <OfflineBanner />
       <NotificationListener />
+      <PulseAIChat />
       <Suspense fallback={<PageFallback />}>
         <Routes>
           {/* Public Marketing & Authentication */}

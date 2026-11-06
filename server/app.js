@@ -17,6 +17,7 @@ const streamRoutes = require("./routes/streamRoutes");
 const marketRoutes = require("./routes/marketRoutes");
 const eventsRoutes = require("./routes/eventsRoutes");
 const screenerRoutes = require("./routes/screenerRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 const { apiLimiter } = require("./middleware/rateLimiters");
 const { isMarketOpen } = require("./utils/marketHours");
 const { getAlertEngineHealth } = require("./utils/alertEngine");
@@ -149,6 +150,7 @@ function createApp() {
   app.use("/api/market", marketRoutes);
   app.use("/api/events", eventsRoutes);
   app.use("/api/screener", screenerRoutes);
+  app.use("/api/chat", chatRoutes);
 
   // Enhanced Health & Observability Endpoint
   app.get(["/", "/api/health"], (req, res) => {

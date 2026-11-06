@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CompanyLogo from "../ui/CompanyLogo";
-import { ArrowUpRight, ArrowDownRight, Clock, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Clock, ChevronRight, Trash2 } from "lucide-react";
 
 const STORAGE_KEY = "stockpulse_recently_viewed";
 
@@ -32,6 +32,16 @@ export function saveRecentlyViewedStock(stock) {
     window.dispatchEvent(new Event("stockpulse_recent_updated"));
   } catch (err) {
     console.warn("Could not save recently viewed stock:", err);
+  }
+}
+
+
+export function clearRecentlyViewed() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new Event("stockpulse_recent_updated"));
+  } catch (err) {
+    console.warn("Could not clear recently viewed stocks:", err);
   }
 }
 
@@ -69,7 +79,22 @@ export default function RecentlyViewedCarousel({ currentSymbol }) {
           <Clock size={14} className="text-blue-400" />
           Recently Analyzed Equities
         </h3>
-        <span className="text-[11px] text-gray-500 font-medium">Quick-Switch Terminal</span>
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] text-gray-500 font-medium hidden sm:inline">Quick-Switch Terminal</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              clearRecentlyViewed();
+              setRecentStocks([]);
+            }}
+            className="text-[11px] font-semibold text-gray-400 hover:text-rose-400 px-2 py-0.5 rounded-lg hover:bg-rose-500/10 border border-white/5 hover:border-rose-500/20 transition-all flex items-center gap-1 cursor-pointer"
+            title="Clear recently analyzed stocks"
+          >
+            <Trash2 size={12} />
+            <span>Clear</span>
+          </button>
+        </div>
       </div>
 
       {/* Horizontal Strip */}

@@ -12,6 +12,7 @@ import {
   BookmarkCheck,
   ChevronLeft,
   Zap,
+  Sparkles,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { getLiveStocks, getStockDetails } from "../services/stockService";
@@ -318,7 +319,7 @@ function StockDetailsPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="no-print flex items-center gap-3 shrink-0">
+          <div className="no-print flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Compare Button */}
             <Link
               to={`/compare?symbols=${displaySymbol}`}
@@ -328,6 +329,23 @@ function StockDetailsPage() {
               <Scale size={16} />
               Compare
             </Link>
+
+            {/* Ask PulseAI Copilot */}
+            <button
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent("pulseai-open-query", {
+                    detail: {
+                      query: `Analyze ${stock?.longName || stock?.shortName || displaySymbol} (${nsSymbol}): What is its PulseScore, 3-year forecast, and valuation?`,
+                    },
+                  })
+                );
+              }}
+              className="h-11 px-4 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-emerald-500/15 hover:from-emerald-500/25 hover:to-teal-500/25 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-500/10 active:scale-95"
+            >
+              <Sparkles size={16} className="text-emerald-400 animate-pulse" />
+              <span>Ask PulseAI</span>
+            </button>
 
             {/* Watchlist Toggle */}
             <button
