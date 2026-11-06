@@ -1,246 +1,254 @@
 # 📈 StockPulse — Indian Stock Market Intelligence & Automated Price Alert Platform
 
-> A production-ready, full-stack fintech platform inspired by **INDmoney** and **Tickertape**, built for Indian NSE equity investors. Features 60-second automated price alert engine with instant rich HTML email notifications, interactive 52-week & day range analytics, real-time Nifty 50 / Sensex tickers, watchlists with live sparklines, and 2,360+ NSE equity search.
+> A production-ready, full-stack fintech platform inspired by **INDmoney**, **Tickertape**, and **TradingView**, engineered specifically for Indian NSE equity investors. Features a 60-second automated price alert engine with instant rich HTML email notifications, live Server-Sent Events (SSE) price streaming, 100-point institutional PulseScore fundamental analysis, multi-horizon forecasts, 8-quarter shareholding & promoter pledge trends, comprehensive financial statements, market-wide corporate actions calendar, full-universe equity screener, and 4-stock side-by-side comparison.
 
 ---
 
-## 🚀 Key Highlights & Architecture
+## 🚀 Architecture & System Design
 
 ```
-                    ┌─────────────────────────┐
-                    │      Vercel Frontend    │
-                    │   React 19 + Vite 8     │
-                    │ Tailwind CSS v4 + Motion│
-                    └────────────┬────────────┘
-                                 │ HTTPS REST
-                                 ▼
-                    ┌─────────────────────────┐
-                    │     Render Backend      │
-                    │  Node.js / Express API  │
-                    │    Yahoo Finance v3     │
-                    └───────┬──────────┬──────┘
-                            │          │
-            60s Cron Loop   │          │ MongoDB Atlas
-                            ▼          ▼
-             ┌────────────────┐     ┌────────────────┐
-             │  Alert Engine  │     │ Database:      │
-             │  Atomic update │     │ Users, Alerts, │
-             │  Nodemailer    │     │ Watchlists,    │
-             │  HTML Template │     │ Notifications  │
-             └────────────────┘     └────────────────┘
+                    ┌─────────────────────────────────────────┐
+                    │            Vercel Frontend              │
+                    │   React 19 + Vite 8 + TanStack Query    │
+                    │ Tailwind CSS v4 + Motion + TradingView  │
+                    └────────────────────┬────────────────────┘
+                                         │ HTTPS / SSE Stream / Same-Origin Rewrite
+                                         ▼
+                    ┌─────────────────────────────────────────┐
+                    │             Render Backend              │
+                    │       Node.js / Express REST API        │
+                    │   Yahoo Finance Gateway + Circuit Break │
+                    └────────┬────────────────────┬───────────┘
+                             │                    │
+             Background Jobs │                    │ Mongoose ODM
+            (Snapshot & Crons)│                    ▼
+                             ▼          ┌───────────────────────────┐
+                    ┌────────────────┐  │      MongoDB Atlas        │
+                    │  Alert Engine  │  │ Users (httpOnly & DPDP)   │
+                    │  Atomic Leases │  │ StockSnapshots & Screens  │
+                    │  NSE Hours Gate│  │ Alerts, Watchlists        │
+                    │  Nodemailer TLS│  │ Shareholding Patterns     │
+                    └────────────────┘  └───────────────────────────┘
 ```
 
 ---
 
-## 🛠️ Ticket-by-Ticket Resolution & Feature Upgrades
+## 📅 Recent Major Engineering Releases (Sprints 11 – 15)
 
-### Ticket 1: Backend Deployment & Core Alert Engine Overhaul
-- **Fixed Inverted Alert Condition Bug**: Previously, the alert engine only checked `currentPrice <= targetPrice` regardless of the user's intent, triggering false positive emails within 60 seconds whenever a user set a target above market price. Added `condition: "above" | "below"`, `initialPrice`, and `triggeredPrice` fields.
-- **Race Condition & Duplicate Trigger Protection**: Switched alert triggering to atomic MongoDB operations (`findOneAndUpdate({ _id, triggered: false }, ...)`). If concurrent cron executions occur, only a single instance can claim and trigger the alert.
-- **Fixed `yahoo-finance2` Class Instantiation**: Updated all imports to `const YahooFinance = require("yahoo-finance2").default; const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });` to resolve v3 runtime errors on cloud datacenters.
-- **Optimized Batch Quote Fetching**: Eliminated serial requests that caused 30-second HTTP timeouts on Render. Indices (`^NSEI`, `^BSESN`) and Market Movers (20 symbols) now fetch in single batch requests under 1 second.
-- **Instant Local NSE Search (0ms)**: Built in-memory search over 2,364 verified Indian NSE equities (`server/data/stocks.json`) with prefix and substring matching. Prevents Yahoo Finance search 500 errors on Render while keeping online fallback for BSE/international tickers.
-- **Dynamic CORS for Vercel Deployments**: Replaced static origin array with dynamic regex matching for `*.vercel.app`, preview domains, localhost, and `process.env.FRONTEND_URL`.
-- **Enriched Live Stock Data**: Expanded live quote responses to include `fiftyTwoWeekHigh`, `fiftyTwoWeekLow`, `trailingPE`, `dividendYield`, `marketCap`, `regularMarketDayHigh`, and `regularMarketDayLow`.
-- **Test Alert Email Endpoint**: Added `POST /api/alerts/test` allowing users to instantly verify their email notification pipeline from the UI.
-- **Resilient Fallback Data**: Added high-availability fallbacks for market indices and market news to guarantee 100% uptime on the frontend even during third-party rate limits.
-
----
-
-### Ticket 2: Frontend Design System & Global UI Cleanup (INDmoney & Tickertape Aesthetic)
-- **Eliminated Default Vite CSS Overrides**: Removed legacy `#root { width: 1126px; text-align: center; }` and boilerplate CSS from `index.css` and `App.css` that broke responsive layouts.
-- **Fintech Dark Theme**: Adopted deep slate-navy backgrounds (`#080d1a`, `#0e1626`), micro-borders (`rgba(255,255,255,0.08)`), glowing emerald accents (`#10b981`), tabular figures for financial numbers, and custom sleek scrollbars.
-- **TopNavbar Real-Time Market Ticker**:
-  - Live NIFTY 50 and SENSEX pills with real-time percentage change.
-  - NSE Market Status badge (Open / Closed based on IST trading hours 9:15 AM – 3:30 PM).
-  - Real-time IST digital clock.
-  - Notification drawer with unread counter and "Mark all as read" button.
-  - Mobile hamburger toggle for responsive drawer navigation.
-- **Responsive Layout & Mobile Drawer**: Added slide-in mobile navigation drawer ensuring 100% usability across mobile, tablet, and desktop screens.
-
----
-
-### Ticket 3: Dedicated Price Alerts System (`/alerts` & Quick Modal)
-- **Dedicated Alerts Management Page (`/alerts`)**:
-  - Filter tabs: **All Alerts**, **Active Monitoring**, and **Triggered Hits**.
-  - Visual Progress Bar: Displays current market price and percentage distance to target (e.g. `₹24 away (98.2%)`).
-  - **"⚡ Test Email Alert" button**: Sends a real-time verification email to the user's registered inbox.
-  - **Re-Arm Action**: Reset triggered alerts to monitor again with one click.
-  - Pause / Resume toggle and Delete with confirmation toasts.
-- **Revamped `CreateAlertModal`**:
-  - Quick target percentage chips (`+2%`, `+5%`, `+10%`, `-5%`, `-10%`) that automatically calculate the target price from current price.
-  - Condition toggle: "Rises Above (≥)" vs "Drops Below (≤)".
-  - Displays user's destination email address for complete transparency.
+### 🔬 Sprint 15: Research Depth (Tickertape Parity) — PR #71
+*Delivered full fundamental analysis, corporate events, universal screening, and side-by-side peer comparison.*
+- **SP-35 (#41) Financial Statements Tab (P&L, Balance Sheet, Cash Flow)**:
+  - Added quarterly and annual financial statements tabs to `/stock/:symbol`.
+  - Comprehensive KPI ratio cards: Return on Capital Employed (ROCE) computed as $\frac{\text{EBIT}}{\text{Total Assets} - \text{Current Liabilities}}$, Return on Equity (ROE), Debt-to-Equity, Operating Profit Margins, and 3Y / 5Y compound annual growth rates (CAGR).
+  - Year-over-year (YoY) percentage change badges and revenue/margin breakdowns.
+- **SP-36 (#42) Shareholding Pattern Trend & Promoter Pledge**:
+  - 8-quarter ownership trend breakdown across Promoter, Foreign Institutional Investors (FII), Domestic Institutional Investors (DII), Mutual Funds, and Public / Retail shareholders.
+  - Promoter pledge risk gauge (`Safe <10%`, `Caution 10–25%`, `High Risk >25%`).
+  - Automated institutional sentiment indicators (e.g., *FII stake increase for 2+ consecutive quarters*).
+- **SP-37 (#43) Corporate Actions & Market Events Calendar**:
+  - Dedicated `/events` page and per-stock corporate actions tracker.
+  - Multi-category filtering: Dividends (with ex-date, record date, and dividend yield), Bonus / Stock Splits, and Upcoming Earnings Announcements.
+  - Scope filtering: **All NSE**, **My Watchlist**, or **My Portfolio**.
+- **SP-38 (#44) Per-Stock News & Exchange Announcements**:
+  - `GET /api/news/:symbol` delivering verified company news and corporate releases.
+  - Natural rule-based financial sentiment tagging (`Positive`, `Neutral`, `Negative`) and secure `rel="noopener noreferrer"` external links.
+- **SP-39 (#45) Full-Universe Screener & Saved Screens**:
+  - Universal equity screener on `/markets` filtering across all ~2,364 NSE equities using MongoDB indexed queries.
+  - Multi-parameter filter builder: Market Cap, P/E, ROE, ROCE, Debt/Equity, Dividend Yield, PulseScore, and Sector filters.
+  - Built-in investment presets (*High Growth Tech*, *Value Dividend Aristocrats*, *Low Debt Quality*, *High Momentum*), streaming CSV export, and custom user-saved screens (`SavedScreen` model).
+- **SP-40 (#46) Side-by-Side Stock Comparison (Up to 4 Stocks)**:
+  - Interactive comparison tool at `/compare?symbols=RELIANCE,TCS,INFY` comparing up to 4 stocks simultaneously.
+  - 100-base normalized performance overlay chart ($P_t / P_0 \times 100$) over 1-year historical trading sessions.
+  - Side-by-side metric matrix covering valuation, profitability, solvency, return ratios, and automated "Best in group" badges.
 
 ---
 
-### Ticket 4: Interactive Stock Details & Watchlist Analytics
-- **Stock Details Page (`/stock/:symbol`)**:
-  - **52-Week Range Bar**: Visual range slider showing 52W Low, 52W High, and exact marker position of the current price (Tickertape signature feature).
-  - **Day's Range Bar**: Visual slider from Day Low to Day High.
-  - **Key Fundamentals Grid**: Market Capitalization (formatted in ₹ Lakh Cr / ₹ Cr), P/E Ratio (TTM), Volume, Open Price, Previous Close, and Dividend Yield.
-  - **Interactive Chart**: Multi-timeframe area chart supporting `1D`, `1W`, `1M`, `3M`, and `1Y`.
-  - **Bullish / Bearish Technical Sentiment Signal**: Dynamic analysis of price momentum and 52-week position.
-  - **Inline Quick Alert Box**: Set an alert directly from the stock page without navigating away.
-- **Dedicated Watchlist Page (`/watchlist`)**:
-  - Full-width tracking table with company logos, prices, 1D % changes, and sparklines.
-  - Instant stock search input with quick-add functionality.
-  - One-click "Set Alert" and "Remove" actions.
+### 🛡️ Sprint 14: Trust, Accounts & UI Polish — PR #70
+*Hardened user authentication, privacy compliance, accessibility, and design system.*
+- **SP-29 (#35) Secure Authentication & Cookie Sessions**:
+  - Replaced localStorage auth with secure, `httpOnly`, `SameSite=Lax` cookie sessions.
+  - Rotating refresh tokens with automatic token reuse detection and multi-device revocation.
+  - Strict Content Security Policy (CSP) headers applied via Helmet.
+- **SP-30 (#36) Verification Lifecycle & DPDP Act 2023 Compliance**:
+  - Email verification workflow with 6-digit cryptographic OTPs and automated welcome emails.
+  - User Settings page (`/settings`) for profile updates, audio/email alert preference toggles, and password changes.
+  - Indian Digital Personal Data Protection (DPDP) Act 2023 compliance: complete JSON data export and cascading account erasure.
+- **SP-31 (#37) SEBI Compliance & Legal Documentation**:
+  - Mandated SEBI non-registered research analyst disclaimers on all stock analysis pages and algorithmic forecasts.
+  - Official public legal documentation: Terms of Service (`/terms`), Privacy Policy (`/privacy`), and Investment Disclaimer (`/disclaimer`).
+  - Clear data-source attribution badges (Yahoo Finance, NSE/BSE).
+- **SP-32 (#38) Design System Tokens & Dual Theme (Dark / Light)**:
+  - System-wide theme switcher supporting Dark Mode and Light Mode with persistent local storage.
+  - Accessible design system tokens, skeleton loading states, empty states, and compact Indian currency formatters (`formatCompactINR` for Lakh / Cr notations).
+- **SP-33 (#39) Mobile Experience & Progressive Web App (PWA)**:
+  - Floating mobile bottom navigation bar with active route indicators and haptic-style transitions.
+  - Offline status banner for network drops and installable PWA web app manifest (`manifest.json`).
+  - Keyboard navigation focus management and ARIA roles for full accessibility compliance.
+- **SP-34 (#40) Public Discovery, SEO & XML Sitemap**:
+  - Publicly accessible stock details (`/stock/:symbol`) and market research pages (`/markets`, `/events`, `/compare`) for unauthenticated users.
+  - Dynamic OpenGraph and Twitter card SEO meta tags via `react-helmet-async`.
+  - Automated XML sitemap generation (`/sitemap.xml`) indexing all ~2,364 NSE equities and search-engine `robots.txt`.
 
 ---
 
-### Ticket 5: Homepage, Auth Flow & Deployment Setup
-- **Homepage (`/`)**: High-converting fintech hero section, real-time indices marquee, 3-step alert explanation, and interactive demo.
-- **Modern Auth Pages (`/login`, `/signup`)**: Removed native browser `alert()` popups in favor of animated toast notifications, password visibility toggles, form validation, and automatic login redirect upon signup.
-- **Root Deployment Files**: Added root `vercel.json`, root `package.json`, and root `.gitignore` to ensure effortless deployment on both Vercel and Render.
+### ⚡ Sprint 13: Performance & Speed — PR #68
+*Engineered extreme speed, route code-splitting, realtime streaming, and API resilience.*
+- **SP-23 (#29) TanStack React Query & Polling Consolidation**:
+  - Migrated key state flows (indices, market movers, notifications, alerts, watchlists) to React Query.
+  - Consolidated duplicate background polling with window focus & tab visibility listeners.
+- **SP-24 (#30) Lightweight Bundle Diet & Route Splitting**:
+  - Code-split all major routes via React `lazy()` and `Suspense`.
+  - Replaced heavy charting libraries on secondary cards with native SVG sparklines and custom CSS donut charts.
+  - Initial gzipped entry bundle reduced to < 35 KB; total initial JS under 120 KB.
+- **SP-25 (#31) HTTP Edge Caching & Vercel Same-Origin Proxy**:
+  - Added HTTP compression middleware (`compression`).
+  - Edge caching headers (`Cache-Control: public, s-maxage=60, stale-while-revalidate=120`) on market snapshot endpoints.
+  - Configured same-origin `/api/*` Vercel rewrites to eliminate cross-origin preflight latency.
+- **SP-26 (#32) Yahoo Finance Gateway & StockSnapshot Background Job**:
+  - Centralized Yahoo Finance query gateway with circuit breaker logic and upstream failure fallbacks.
+  - Nightly background worker (`StockSnapshot` collection) pre-populating pricing and fundamental metrics for fast queries.
+- **SP-27 (#33) Live SSE Price Quote Streaming**:
+  - Server-Sent Events endpoint `GET /api/stream?symbols=...` for low-latency, zero-polling live ticker updates.
+  - Client-side hook `useLiveQuotes` with automatic reconnect and channel subscription management.
+- **SP-28 (#34) Request Correlation & Health Observability**:
+  - Unique `X-Request-Id` tracing middleware across all HTTP requests.
+  - Root React `ErrorBoundary` with reset capabilities.
+  - Enhanced `/api/health` endpoint detailing database connectivity, alert engine health, and background worker state.
 
 ---
 
-### Ticket 6: Company Logos, Advanced Candlestick Charts & Investment Pros/Cons (Tickertape & INDmoney Experience)
-- **Multi-Tier Company Logo Resolver (`CompanyLogo.jsx`)**:
-  - Automatically displays official high-resolution corporate logos for Indian equities.
-  - Multi-tier resolution strategy: Tickertape CDN / Clearbit corporate domains → Google Favicon high-res proxy → Elegant fallback gradient badge with ticker initials.
-  - Uniformly integrated across **Stock Details**, **Watchlists**, **Alerts Cards**, **Stock Search Dropdown**, and **Top Market Movers**.
-- **Investment Pros & Cons / SWOT Analysis (`CompanyProsCons.jsx`)**:
-  - Inspired by Tickertape's Investment Checklist and INDmoney's Stock Scorecard.
-  - **Dynamic Fundamental & Technical Evaluation**: Analyzes Valuation (P/E ratio against benchmarks), 52-Week Range proximity, Day's Trading Momentum, Dividend Yield, and Trading Volume Liquidity.
-  - **Balanced Scorecard**: Clearly segmented into Green Pros (Strengths & Tailwinds) and Amber/Red Cons (Watchouts & Valuation Flags) with an overall Investment Checklist score (e.g. `3 of 5 criteria passed`).
-  - **Contextual Explanations**: Plain-English rationale for each flag so retail investors can make informed decisions in seconds.
+### 🎯 Sprint 12: Correctness & Data Honesty — PR #66
+*Eliminated artificial data, validated alert mechanics, and established automated testing.*
+- **SP-17 (#23) Alert Engine Correctness & Multi-Instance Safety**:
+  - Alert execution strictly gated to active NSE market hours (09:15 to 15:30 IST, Monday – Friday).
+  - NSE holiday calendar integration to prevent erroneous alert execution on exchange holidays.
+  - Distributed atomic lease locking (`findOneAndUpdate`) to prevent duplicate email triggers across multi-container deployments.
+  - Rejection of target prices already met at creation time.
+- **SP-18 (#24) Pure Honest Market Data**:
+  - Eradicated all synthetic/mock financial figures from production endpoints.
+  - Accurate data labeling for Trailing P/E, Forward P/E, Market Cap, and normalized dividend yields.
+- **SP-19 (#25) Single Source of Truth for PulseScore & Forecasts**:
+  - Unified 100-point PulseScore calculation in a shared backend service used by both dossier cards and forecast models.
+- **SP-20 (#26) Race Condition Elimination**:
+  - Fixed asynchronous component unmount race conditions and stale auth closures across React views.
+- **SP-21 (#27) Database Optimization**:
+  - Added compound indexes on MongoDB collections (`symbol`, `userId`, `triggered`, `createdAt`).
+  - Implemented cursor-based pagination and TCP keepAlive connection options on Mongoose.
+- **SP-22 (#28) Automated Test Baseline**:
+  - Established Node.js test runner suite (`node --test`) with MongoDB Memory Server.
+  - Vitest test suite for client utility formatters and broker CSV parsers.
+  - Minimum 60% server line coverage enforcement (currently at **73.96%**).
 
 ---
 
-### Ticket 7: TradingView Lightweight Charts & SEBI-Categorized Top Movers
-- **TradingView Lightweight Charts (`TradingViewChart.jsx`)**:
-  - Replaced custom SVG charts with the official **TradingView Lightweight Charts v5** WebGL/Canvas financial charting engine.
-  - **Realistic Candlesticks**: Green bullish (`#10b981`) and red bearish (`#ef4444`) candles with pixel-perfect wicks and bodies.
-  - **Chart Types**: Instant toggle between **Candles**, **Area**, and **Bars**.
-  - **7 Timeframe Selectors**: `1D`, `5D`, `1M`, `3M`, `6M`, `1Y`, and `5Y` backed by real Yahoo Finance OHLC quote intervals (5m, 15m, 1d, 1wk).
-  - **Technical Indicators Suite**:
-    - **SMA (20)**: 20-period Simple Moving Average line overlay (sky-blue).
-    - **EMA (20)**: 20-period Exponential Moving Average line overlay (amber).
-    - **Volume Histogram**: Bullish/bearish volume bars aligned with price action.
-    - **RSI (14)**: Synchronized lower sub-chart pane with 70 overbought and 30 oversold horizontal threshold bands.
-    - **MACD (12, 26, 9)**: Synchronized lower sub-chart pane with MACD line, signal line, and color-coded momentum histogram.
-  - **Crosshair & Live OHLCV Banner**: Interactive cursor dynamically updating Open, High, Low, Close, and Volume at the top of the chart canvas.
-  - **Responsive Resizing**: Uses browser `ResizeObserver` for zero-glitch resizing across mobile, tablet, and desktop.
-- **Dedicated Today's Top Movers (`MarketMovers.jsx`)**:
-  - **Three Market-Cap Categories**: **Large Cap**, **Mid Cap**, and **Small Cap** with responsive segmented controls.
-  - **SEBI Classification Benchmark**:
-    - **Large Cap**: Top 100 companies by full market cap (> ₹50,000 Cr approx).
-    - **Mid Cap**: 101st – 250th companies (₹15,000 – ₹50,000 Cr approx).
-    - **Small Cap**: 251st company onwards (< ₹15,000 Cr approx).
-  - **Top Gainers & Top Losers Tabs**: Gainers sorted descending by positive % change; losers sorted ascending by largest negative % change.
-  - **Data Columns**: Company Logo, Name & Symbol, Latest Price, Absolute Price Change (`+₹` / `-₹`), % Change, Trading Volume, Market Cap (₹ Lakh Cr / ₹ Cr), Session Sparkline, and 1-click Chart Link.
-  - **Methodology & Market Status Badge**: Expandable SEBI rules drawer with last-updated timestamp and NSE market session indicator.
-  - **Mobile Responsive Design**: Clean desktop table and touch-friendly mobile cards.
+### 🔒 Sprint 11: Security Hotfix — PR #57
+*Secrets hygiene, sanitization, and automated CI pipelines.*
+- **SP-15 (#21) Input Validation & Error Sanitization**:
+  - Built comprehensive request validation middleware using `express-validator` on all API endpoints.
+  - Production-safe error handling to eliminate database schema leaks and stack traces in HTTP responses.
+- **SP-16 (#22) Hardened GitHub CI Pipeline**:
+  - Secret scanning with **Gitleaks** and **GitGuardian Push Protection**.
+  - Production npm vulnerability auditing (`npm audit --audit-level=high`).
+  - Automated testing for client and server on every pull request.
+  - Automated dependency updates via **Dependabot**.
+- **Credentials & Transport Hygiene**:
+  - Removed demo credentials from login interfaces.
+  - Restricted CORS origins to authorized StockPulse domains.
+  - Enforced strict TLS verification and HTML sanitization on all transactional alert emails.
 
 ---
 
-### Ticket 8: Premium Global Navbar & Unified UI Redesign (TradingView, Zerodha, Groww & Robinhood Inspired)
-- **Unified Global Top Navbar (`TopNavbar.jsx`)**:
-  - **Professional Platform Brand**: Clean geometric vector pulse icon with cyan-to-emerald gradient badge, bold modern typography, and `PRO` verification pill.
-  - **Integrated Primary Navigation**: Desktop links for **Dashboard**, **Watchlist** (with active count pill), **Price Alerts** (with monitoring count pill), and **Movers**.
-  - **Embedded Real-Time Search**: Fast `StockSearch` with 2,364 NSE equity index and corporate logos.
-  - **Live Indices Ticker**: Compact NIFTY 50 and SENSEX pills with live prices, percentage change indicators, and NSE Open/Closed market status badge with IST clock.
-  - **Quick Watchlist Shortcut**: Dedicated 1-click bookmark shortcut button with count badge.
-  - **Rich Notification Drawer**: Refined notification bell with unread badge counter, alert hit history, and "Mark all as read" action.
-  - **Profile Menu**: User avatar with initials, summary stats (active alerts, tracked assets), and sign-out button.
-- **Expansive Full-Width Layout (`AppLayout.jsx`)**:
-  - Removed desktop sidebar constraints to provide full horizontal breathing room for TradingView candlestick charts, wide tables, and analytics.
-  - Retained slide-in mobile navigation drawer (`Sidebar.jsx`) for complete responsiveness on smartphones and tablets.
-- **Polished Visual Tokens (`Card.jsx` & Design System)**:
-  - Sophisticated neutral dark theme (`#090e17` canvas, `#0e1626` cards), subtle borders (`rgba(255,255,255,0.08)`), high-contrast typography, and smooth micro-interactions.
+## 🧠 Institutional Intelligence & PulseScore™
+
+StockPulse features a proprietary **100-Point Fundamental PulseScore Engine**, inspired by the *Coffee Can Investing* framework:
+
+| Category | Max Score | Key Metrics Evaluated |
+| :--- | :---: | :--- |
+| **Profitability** | 25 pts | Operating Margins, ROCE, ROE consistency |
+| **Solvency & Health** | 25 pts | Debt-to-Equity (< 0.5 preferred), Interest Coverage |
+| **Growth Consistency** | 20 pts | 3Y & 5Y Revenue and Net Profit CAGR |
+| **Valuation & Quality** | 15 pts | P/E vs Industry Peers, Price-to-Book, PEG Ratio |
+| **Governance & Ownership**| 15 pts | Promoter holding stability, Pledge % (< 10%), FII/DII trend |
+
+- **Stock Dossier**: Visual breakdown of strong compounders vs high-debt speculative equities.
+- **Portfolio Diagnostic**: Instant portfolio-level health audit highlighting overconcentration, low-scoring equities, and high-debt exposures.
+- **Algorithmic Forecasts**: 1-Year, 3-Year, and 5-Year target projections factoring in historical earnings growth, analyst consensus, and compound interest compounding rates.
 
 ---
 
-## ⚙️ Environment Variables
+## 🛠️ Complete Feature Set Summary
 
-### Server (`server/.env` & Render Environment Variables)
-| Variable | Description | Example |
-| :--- | :--- | :--- |
-| `PORT` | Server listening port | `5000` |
-| `MONGO_URI` | MongoDB Atlas Connection String | `mongodb+srv://<user>:<password>@<cluster>.mongodb.net/<db>` |
-| `JWT_SECRET` | Secret key for JWT signing (32+ random bytes) | `<generate with: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))">` |
-| `EMAIL_USER` | Gmail address for sending alerts | `<your-alerts-address>@gmail.com` |
-| `EMAIL_PASS` | Gmail App Password (16 chars) | `<your-gmail-app-password>` |
-| `FRONTEND_URL` | Deployed Vercel frontend URL | `https://stockpulse-mu-three.vercel.app` |
-| `ALLOWED_ORIGINS` | (Optional) Extra comma-separated CORS origins | `https://stockpulse.example.com` |
-| `NEWS_API_KEY` | (Optional) NewsAPI.org API Key | `<your-newsapi-key>` |
-| `RENDER_EXTERNAL_URL` | (Optional) Public API URL used by keep-alive pings | `https://<service>.onrender.com` |
-
-Copy `server/.env.example` to `server/.env` and `client/.env.example` to `client/.env` for local development. Never commit real `.env` files.
-
-### Client (`client/.env` & Vercel Environment Variables)
-| Variable | Description | Example |
-| :--- | :--- | :--- |
-| `VITE_API_URL` | URL to the deployed Render API | `https://stock-market-platform-2j95.onrender.com/api` |
+- **⚡ Real-Time Price Alerts**: Target price alerts with instant rich HTML email notifications.
+- **📈 Advanced Candlestick Charts**: Powered by TradingView Lightweight Charts v5 with RSI, MACD, SMA, EMA, and Volume sub-panes.
+- **🔍 2,364+ NSE Equity Search**: Instant sub-millisecond local symbol resolution.
+- **📊 Financial Statements**: P&L, Balance Sheet, and Cash Flow with annual/quarterly toggles and YoY growth.
+- **👥 Shareholding Trends**: 8-quarter ownership breakdown with institutional sentiment & promoter pledge alerts.
+- **📅 Corporate Events**: Dividends, stock splits, bonus issues, and earnings announcements calendar.
+- **🔎 Universal Screener**: Multi-metric screener with pre-built presets and CSV streaming.
+- **⚖️ Side-by-Side Compare**: 4-stock comparison with 100-base normalized performance chart.
+- **💼 Portfolio Tracker & Broker CSV**: Upload Zerodha/Groww portfolio exports for instant tracking.
+- **🛡️ DPDP & Privacy**: Full data export, account deletion, and SEBI compliance notices.
 
 ---
 
-## 🚢 Deployment Guide (Redeploying on Vercel & Render)
+## ⚙️ Environment Configuration
 
-### 1. Redeploying the Backend on Render
-1. Push your updated code to GitHub:
-   ```bash
-   git add .
-   git commit -m "feat: complete fintech UI revamp, alert engine fix, and deployment setup"
-   git push origin main
-   ```
-2. Go to your **[Render Dashboard](https://dashboard.render.com/)** and select your Web Service (`stock-market-platform-2j95`).
-3. Under **Settings**:
-   - **Root Directory**: `server`
-   - **Build Command**: `npm install`
-   - **Start Command**: `node index.js`
-4. Under **Environment**:
-   - Ensure `MONGO_URI`, `JWT_SECRET`, `EMAIL_USER`, `EMAIL_PASS`, and `FRONTEND_URL` are configured.
-5. Click **Manual Deploy** → **Deploy latest commit** (or Render will automatically trigger upon GitHub push).
+### Server (`server/.env`)
+```ini
+PORT=5000
+NODE_ENV=production
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/stockpulse
+JWT_SECRET=your_super_secret_jwt_key_at_least_32_bytes_long
+EMAIL_USER=your_verified_sender_address@gmail.com
+EMAIL_PASS=your_gmail_app_password
+FRONTEND_URL=https://stockpulse-mu-three.vercel.app
+ALLOWED_ORIGINS=https://stockpulse-mu-three.vercel.app,http://localhost:5173
+RENDER_EXTERNAL_URL=https://stock-market-platform-2j95.onrender.com
+```
 
-### 2. Redeploying the Frontend on Vercel
-1. Go to your **[Vercel Dashboard](https://vercel.com/)** and select your project (`stockpulse-mu-three`).
-2. Under **Project Settings** → **General**:
-   - **Root Directory**: `client` (or leave default root with the provided root `vercel.json`)
-   - **Framework Preset**: `Vite`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-3. Under **Environment Variables**:
-   - Add/Verify `VITE_API_URL` = `https://stock-market-platform-2j95.onrender.com/api`
-4. Go to **Deployments** → Click **Redeploy** on the latest deployment (or trigger via GitHub push).
+### Client (`client/.env`)
+```ini
+VITE_API_URL=https://stock-market-platform-2j95.onrender.com/api
+```
+
+---
+
+## 🧪 Testing & Verification
+
+Run the comprehensive test suites locally:
+
+```bash
+# Server Test Suite & Line Coverage Report (node --test + c8)
+cd server
+npm test
+
+# Client Unit Tests (vitest)
+cd ../client
+npm test
+
+# Client Production Build Check (vite build)
+npm run build
+```
 
 ---
 
 ## 💻 Local Development Setup
 
-### 1. Clone & Install Dependencies
 ```bash
+# 1. Clone repository
 git clone https://github.com/shailesh7705/stock-market-platform.git
 cd stock-market-platform
 
-# Install client dependencies
+# 2. Install dependencies
 cd client && npm install
-
-# Install server dependencies
 cd ../server && npm install
+
+# 3. Start development servers
+# Terminal 1: Backend
+cd server && npm run dev
+
+# Terminal 2: Frontend
+cd client && npm run dev
 ```
 
-### 2. Start Local Servers
-- **Backend (Port 5000)**:
-  ```bash
-  cd server
-  npm run dev
-  ```
-- **Frontend (Port 5173)**:
-  ```bash
-  cd client
-  npm run dev
-  ```
-
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
----
-
-## 📧 Email Alert Verification
-To verify that email alerts are working:
-1. Log in to your StockPulse account.
-2. Navigate to **Price Alerts** (`/alerts`).
-3. Click the **"⚡ Test Email Alert"** button.
-4. Check your inbox for a formatted HTML alert from `StockPulse Alerts 📈`!
+Visit [http://localhost:5173](http://localhost:5173) in your browser.
