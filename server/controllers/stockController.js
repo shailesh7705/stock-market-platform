@@ -47,14 +47,19 @@ function parseDividendYield(raw) {
   return Number((num / 100).toFixed(2));
 }
 
+function timeoutPromise(ms, message = "Timeout") {
+  return new Promise((_, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    if (timer && timer.unref) timer.unref();
+  });
+}
+
 // ─── Safe Quote Helper with Timeout ───────────────────────────────────────────
 async function safeQuote(symbolOrSymbols, timeoutMs = 8000) {
   try {
     return await Promise.race([
       yahooFinance.quote(symbolOrSymbols, {}, YF_OPTS),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), timeoutMs)
-      ),
+      timeoutPromise(timeoutMs),
     ]);
   } catch (err) {
     console.warn(`[SafeQuote] Failed for ${symbolOrSymbols}:`, err.message);
@@ -377,9 +382,7 @@ const getHistoricalData = async (req, res) => {
 
     const result = await Promise.race([
       yahooFinance.chart(symbol, { period1, interval }, YF_OPTS),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 10000)
-      ),
+      timeoutPromise(10000),
     ]);
 
     if (!result?.quotes?.length) {
@@ -486,9 +489,7 @@ const searchStocks = async (req, res) => {
             { newsCount: 0, quotesCount: 8, enableFuzzyQuery: false },
             YF_OPTS
           ),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Timeout")), 4000)
-          ),
+          timeoutPromise(4000),
         ]);
 
         matches = (result.quotes || [])
@@ -545,11 +546,11 @@ async function fetchSingleStockDetails(rawSymbol) {
         },
         YF_OPTS
       ),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000)),
+      timeoutPromise(8000),
     ]),
     Promise.race([
       yahooFinance.quote(symbol, {}, YF_OPTS),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 6000)),
+      timeoutPromise(6000),
     ]),
   ]);
 
@@ -803,7 +804,7 @@ async function closesFor(symbol, years) {
   try {
     const chart = await Promise.race([
       yahooFinance.chart(symbol, { period1, interval }, YF_OPTS),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000)),
+      timeoutPromise(8000),
     ]);
     const closes = (chart?.quotes || []).map((quote) => Number(quote.close)).filter((price) => price > 0);
     setCache(cacheKey, closes, 10 * 60 * 1000);

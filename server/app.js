@@ -3,6 +3,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const mongoSanitize = require("express-mongo-sanitize");
 const mongoose = require("mongoose");
+const compression = require("compression");
+const crypto = require("crypto");
 const authRoutes = require("./routes/authRoutes");
 const stockRoutes = require("./routes/stockRoutes");
 const watchlistRoutes = require("./routes/watchlistRoutes");
@@ -13,6 +15,9 @@ const portfolioRoutes = require("./routes/portfolioRoutes");
 const streamRoutes = require("./routes/streamRoutes");
 const marketRoutes = require("./routes/marketRoutes");
 const { apiLimiter } = require("./middleware/rateLimiters");
+const { isMarketOpen } = require("./utils/marketHours");
+const { getAlertEngineHealth } = require("./utils/alertEngine");
+const { getSnapshotJobStatus } = require("./jobs/snapshotJob");
 
 function createApp() {
   const isProduction = process.env.NODE_ENV === "production";
@@ -35,6 +40,26 @@ function createApp() {
 
   const app = express();
   app.set("trust proxy", 1);
+  app.set("etag", "strong");
+
+  // HTTP response compression
+  app.use(
+    compression({
+      threshold: 1024,
+      filter: (req, res) => {
+        if (req.headers["x-no-compression"]) return false;
+        return compression.filter(req, res);
+      },
+    })
+  );
+
+  // Request correlation ID
+  app.use((req, res, next) => {
+    req.id = req.headers["x-request-id"] || crypto.randomUUID();
+    res.setHeader("X-Request-ID", req.id);
+    next();
+  });
+
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -44,6 +69,7 @@ function createApp() {
       hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
     })
   );
+
   app.use(
     cors({
       origin: (origin, callback) => {
@@ -53,8 +79,8 @@ function createApp() {
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-      exposedHeaders: ["X-Next-Cursor"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+      exposedHeaders: ["X-Next-Cursor", "X-Request-ID"],
     })
   );
 
@@ -72,10 +98,26 @@ function createApp() {
   app.use(mongoSanitize());
   app.use("/api/stream", streamRoutes);
   app.use("/api", apiLimiter);
+
+  // Per-Route Cache-Control Policy Helper
   app.use((req, res, next) => {
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
+    const isPublicMarketGet =
+      req.method === "GET" &&
+      (req.path.startsWith("/api/stocks") ||
+        req.path.startsWith("/api/market") ||
+        req.path.startsWith("/api/news"));
+
+    if (isPublicMarketGet) {
+      if (isMarketOpen()) {
+        res.setHeader("Cache-Control", "public, max-age=15, s-maxage=15, stale-while-revalidate=60");
+      } else {
+        res.setHeader("Cache-Control", "public, max-age=300, s-maxage=300, stale-while-revalidate=600");
+      }
+    } else {
+      res.setHeader("Cache-Control", "private, no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
     next();
   });
 
@@ -88,13 +130,39 @@ function createApp() {
   app.use("/api/portfolio", portfolioRoutes);
   app.use("/api/market", marketRoutes);
 
+  // Enhanced Health & Observability Endpoint
   app.get(["/", "/api/health"], (req, res) => {
+    const dbConnected = mongoose.connection.readyState === 1;
+    const alertHealth = getAlertEngineHealth();
+    const snapshotHealth = getSnapshotJobStatus();
+    const marketOpen = isMarketOpen();
+
+    let isDegraded = !dbConnected;
+    if (marketOpen && alertHealth.lastRunAt) {
+      const minutesSinceAlertCheck = (Date.now() - new Date(alertHealth.lastRunAt).getTime()) / 60000;
+      if (minutesSinceAlertCheck > 5) {
+        isDegraded = true;
+      }
+    }
+
+    const memory = process.memoryUsage();
     res.json({
-      status: "ok",
+      status: isDegraded ? "degraded" : "ok",
       service: "StockPulse API",
-      dbState: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+      dbState: dbConnected ? "connected" : "disconnected",
+      marketSession: {
+        isOpen: marketOpen,
+      },
+      alertEngine: alertHealth,
+      snapshotJob: snapshotHealth,
+      system: {
+        uptime: Math.floor(process.uptime()),
+        memory: {
+          heapUsedMB: Math.round(memory.heapUsed / 1024 / 1024),
+          rssMB: Math.round(memory.rss / 1024 / 1024),
+        },
+      },
       timestamp: new Date().toISOString(),
-      uptime: Math.floor(process.uptime()),
     });
   });
 
@@ -112,7 +180,7 @@ function createApp() {
     if (clientError) {
       return res.status(clientError[0]).json({ message: clientError[1] });
     }
-    console.error("[Error]", err.stack || err.message);
+    console.error(`[Error] [Req: ${req.id || "N/A"}]`, err.stack || err.message);
     if (isProduction) {
       return res.status(500).json({ message: "An unexpected error occurred. Please try again later." });
     }

@@ -15,7 +15,7 @@ async function snapshotIndices() {
   try {
     const raw = await Promise.race([
       yahooFinance.quote(["^NSEI", "^BSESN"], {}, YF_OPTS),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 6000)),
+      new Promise((_, reject) => { const t = setTimeout(() => reject(new Error("Timeout")), 6000); if (t.unref) t.unref(); }),
     ]);
     const results = Array.isArray(raw) ? raw : raw ? [raw] : [];
     const data = [];

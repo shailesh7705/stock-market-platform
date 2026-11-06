@@ -5,6 +5,8 @@ const connectDB = require("./config/db");
 const startAlertEngine = require("./utils/alertEngine");
 const { startLiveHub } = require("./utils/liveHub");
 const startKeepAlive = require("./utils/keepAlive");
+const { startSnapshotJob } = require("./jobs/snapshotJob");
+const priceHub = require("./services/priceHub");
 const { createApp } = require("./app");
 
 const missingEnv = ["MONGO_URI", "JWT_SECRET"].filter((key) => !process.env[key]);
@@ -20,6 +22,8 @@ startAlertEngine();
 connectDB();
 startLiveHub();
 startKeepAlive();
+startSnapshotJob();
+priceHub.start();
 
 const app = createApp();
 const PORT = process.env.PORT || 5000;
