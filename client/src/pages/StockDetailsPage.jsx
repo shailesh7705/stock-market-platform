@@ -26,6 +26,11 @@ import CompanyProsCons from "../components/stocks/CompanyProsCons";
 import StockDossier from "../components/stocks/StockDossier";
 import PeerComparisonMatrix from "../components/stocks/PeerComparisonMatrix";
 import RecentlyViewedCarousel, { saveRecentlyViewedStock } from "../components/stocks/RecentlyViewedCarousel";
+import FinancialsTab from "../components/stocks/FinancialsTab";
+import ShareholdingTab from "../components/stocks/ShareholdingTab";
+import EventsTab from "../components/stocks/EventsTab";
+import NewsTab from "../components/stocks/NewsTab";
+import { Scale, FileSpreadsheet, PieChart, Calendar, Newspaper, BarChart2 } from "lucide-react";
 import CreateAlertModal from "../components/alerts/CreateAlertModal";
 import useWatchlistStore from "../store/watchlistStore";
 import toast from "react-hot-toast";
@@ -44,6 +49,7 @@ function StockDetailsPage() {
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alertModalOpen, setAlertModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalType, setAuthModalType] = useState("signup");
   const { user } = useAuthStore();
@@ -313,6 +319,16 @@ function StockDetailsPage() {
 
           {/* Action Buttons */}
           <div className="no-print flex items-center gap-3 shrink-0">
+            {/* Compare Button */}
+            <Link
+              to={`/compare?symbols=${displaySymbol}`}
+              className="h-11 px-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-xs flex items-center gap-1.5 transition-all"
+              title="Compare with other stocks"
+            >
+              <Scale size={16} />
+              Compare
+            </Link>
+
             {/* Watchlist Toggle */}
             <button
               onClick={handleWatchlistToggle}
@@ -345,60 +361,151 @@ function StockDetailsPage() {
           </div>
         </motion.div>
 
-        {/* Main Grid: Advanced Chart & Quick Insights */}
-        <div className="no-print grid grid-cols-1 xl:grid-cols-12 gap-6">
-          {/* Left Chart Card */}
-          <div className="xl:col-span-8 space-y-6">
-            <StockDetailsChart
-              symbol={nsSymbol}
-              stockName={stock?.name || stock?.shortName || displaySymbol}
-              currentPrice={stock?.price}
-              priceChange={stock?.change}
-              changeAmount={stock?.changeAmount}
-            />
+        {/* Research Tabs Switcher (Tickertape Parity: SP-35 to SP-38) */}
+        <div className="no-print flex items-center gap-2 border-b border-white/[0.08] overflow-x-auto pb-2">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "overview"
+                ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
+                : "text-gray-400 hover:text-white bg-white/5 border border-transparent"
+            }`}
+          >
+            <BarChart2 size={15} />
+            Overview & Technicals
+          </button>
 
-            {/* Inline Quick Alert Trigger Card */}
-            <div className="p-5 bg-gradient-to-r from-emerald-950/40 via-[#0e1626] to-[#0e1626] border border-emerald-500/20 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                  <Bell size={20} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">
-                    Automate notifications for {displaySymbol}
-                  </h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Our 60-second engine monitors price targets and emails you instantly upon execution.
-                  </p>
+          <button
+            onClick={() => setActiveTab("financials")}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "financials"
+                ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
+                : "text-gray-400 hover:text-white bg-white/5 border border-transparent"
+            }`}
+          >
+            <FileSpreadsheet size={15} />
+            Financials (P&L, Balance Sheet, Cash Flow)
+          </button>
+
+          <button
+            onClick={() => setActiveTab("shareholding")}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "shareholding"
+                ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
+                : "text-gray-400 hover:text-white bg-white/5 border border-transparent"
+            }`}
+          >
+            <PieChart size={15} />
+            Shareholding & Pledge
+          </button>
+
+          <button
+            onClick={() => setActiveTab("events")}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "events"
+                ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
+                : "text-gray-400 hover:text-white bg-white/5 border border-transparent"
+            }`}
+          >
+            <Calendar size={15} />
+            Corporate Actions & Events
+          </button>
+
+          <button
+            onClick={() => setActiveTab("news")}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "news"
+                ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
+                : "text-gray-400 hover:text-white bg-white/5 border border-transparent"
+            }`}
+          >
+            <Newspaper size={15} />
+            News & Filings
+          </button>
+        </div>
+
+        {activeTab === "overview" && (
+          <>
+            {/* Main Grid: Advanced Chart & Quick Insights */}
+            <div className="no-print grid grid-cols-1 xl:grid-cols-12 gap-6">
+              {/* Left Chart Card */}
+              <div className="xl:col-span-8 space-y-6">
+                <StockDetailsChart
+                  symbol={nsSymbol}
+                  stockName={stock?.name || stock?.shortName || displaySymbol}
+                  currentPrice={stock?.price}
+                  priceChange={stock?.change}
+                  changeAmount={stock?.changeAmount}
+                />
+
+                {/* Inline Quick Alert Trigger Card */}
+                <div className="p-5 bg-gradient-to-r from-emerald-950/40 via-[#0e1626] to-[#0e1626] border border-emerald-500/20 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                      <Bell size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">
+                        Automate notifications for {displaySymbol}
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Our 60-second engine monitors price targets and emails you instantly upon execution.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleAlertClick}
+                    className="h-10 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold shrink-0 transition-all shadow-md shadow-emerald-500/20"
+                  >
+                    Create Alert Now
+                  </button>
                 </div>
               </div>
 
-              <button
-                onClick={handleAlertClick}
-                className="h-10 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold shrink-0 transition-all shadow-md shadow-emerald-500/20"
-              >
-                Create Alert Now
-              </button>
+              {/* Right Insights Column */}
+              <div className="xl:col-span-4">
+                <StockInsights stock={stock} />
+              </div>
             </div>
-          </div>
 
-          {/* Right Insights Column */}
-          <div className="xl:col-span-4">
-            <StockInsights stock={stock} />
-          </div>
-        </div>
+            {/* Deep Stock Intelligence Dossier (PulseScore & Institutional Matrix) */}
+            {details && (
+              <StockDossier details={details} livePrice={stock?.price} />
+            )}
 
-        {/* ── Deep Stock Intelligence Dossier (PulseScore & Institutional Matrix) ── */}
-        {details && (
-          <StockDossier details={details} livePrice={stock?.price} />
+            <PeerComparisonMatrix symbol={nsSymbol} />
+
+            {/* Pros & Cons (Investment Checklist) */}
+            <div className="no-print w-full">
+              <CompanyProsCons stock={stock} />
+            </div>
+          </>
         )}
 
-        <PeerComparisonMatrix symbol={nsSymbol} />
+        {activeTab === "financials" && (
+          <div className="no-print">
+            <FinancialsTab symbol={nsSymbol} />
+          </div>
+        )}
 
-        {/* ── Pros & Cons (Investment Checklist) ── */}
-        <div className="no-print w-full">
-          <CompanyProsCons stock={stock} />
-        </div>
+        {activeTab === "shareholding" && (
+          <div className="no-print">
+            <ShareholdingTab symbol={nsSymbol} />
+          </div>
+        )}
+
+        {activeTab === "events" && (
+          <div className="no-print">
+            <EventsTab symbol={nsSymbol} />
+          </div>
+        )}
+
+        {activeTab === "news" && (
+          <div className="no-print">
+            <NewsTab symbol={nsSymbol} />
+          </div>
+        )}
 
         {/* SEBI Compliance Disclosure */}
         <div className="no-print pt-4">

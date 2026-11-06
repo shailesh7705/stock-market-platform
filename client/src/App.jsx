@@ -15,6 +15,8 @@ const WatchlistPage = lazy(() => import("./pages/WatchlistPage"));
 const AlertsPage = lazy(() => import("./pages/AlertsPage"));
 const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
 const MarketsPage = lazy(() => import("./pages/MarketsPage"));
+const EventsPage = lazy(() => import("./pages/EventsPage"));
+const ComparePage = lazy(() => import("./pages/ComparePage"));
 const Settings = lazy(() => import("./pages/Settings"));
 const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const TermsPage = lazy(() => import("./pages/legal/TermsPage"));
@@ -75,8 +77,10 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/verify-email/:token" element={<VerifyEmail />} />
 
-          {/* Public Research & Equity Discovery (SP-34 SEO / Unlocked) */}
+          {/* Public Research & Equity Discovery (SP-34, SP-37, SP-39, SP-40) */}
           <Route path="/markets" element={<MarketsPage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/compare" element={<ComparePage />} />
           <Route path="/stock/:symbol" element={<StockDetailsPage />} />
 
           {/* Compliance & Legal Documentation (SP-31) */}

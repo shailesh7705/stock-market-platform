@@ -57,6 +57,23 @@ const stockSnapshotSchema = new mongoose.Schema(
     pe: {
       type: Number,
       default: null,
+      index: true,
+    },
+    pb: {
+      type: Number,
+      default: null,
+    },
+    roe: {
+      type: Number,
+      default: null,
+    },
+    roce: {
+      type: Number,
+      default: null,
+    },
+    debtToEquity: {
+      type: Number,
+      default: null,
     },
     dividendYield: {
       type: Number,
@@ -91,5 +108,7 @@ const stockSnapshotSchema = new mongoose.Schema(
 
 stockSnapshotSchema.index({ sector: 1, pulseScore: -1 });
 stockSnapshotSchema.index({ marketCap: -1, changePercent: -1 });
+stockSnapshotSchema.index({ roe: -1 });
+stockSnapshotSchema.index({ roce: -1 });
 
 module.exports = mongoose.model("StockSnapshot", stockSnapshotSchema);

@@ -10,6 +10,8 @@ import {
   Zap,
   Activity,
   Compass,
+  Scale,
+  Calendar,
   X,
   ChevronRight,
 } from "lucide-react";
@@ -43,9 +45,21 @@ function Sidebar({ onCloseMobile }) {
       badge: null,
     },
     {
-      title: "Markets",
+      title: "Screener",
       path: "/markets",
       icon: Compass,
+      badge: null,
+    },
+    {
+      title: "Compare",
+      path: "/compare",
+      icon: Scale,
+      badge: null,
+    },
+    {
+      title: "Events",
+      path: "/events",
+      icon: Calendar,
       badge: null,
     },
     {
