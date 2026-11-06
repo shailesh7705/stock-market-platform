@@ -22,7 +22,7 @@ Module.prototype.require = function requireWithTestDoubles(id) {
     };
   }
 
-  if (!wrappingHours && (id === "../utils/marketHours" || id.endsWith(`${path.sep}marketHours.js`) || id.endsWith("/utils/marketHours"))) {
+  if (!wrappingHours && id.includes("marketHours")) {
     wrappingHours = true;
     try {
       const real = original.apply(this, arguments);

@@ -27,6 +27,8 @@ import StockSearch from "../search/StockSearch";
 import MarketStatusPill from "../common/MarketStatusPill";
 import { getMarketIndices } from "../../services/marketService";
 import { markAllRead } from "../../services/notificationService";
+import { useIndices } from "../../hooks/queries/useIndices";
+import { useNotifications, useMarkAllRead } from "../../hooks/queries/useNotifications";
 import { updateAlertSound } from "../../services/authService";
 import useAlertStore from "../../store/alertStore";
 import useAuthStore from "../../store/authStore";
@@ -101,30 +103,29 @@ export default function TopNavbar({ onOpenMobileMenu }) {
     return () => window.removeEventListener("stockpulse:indices", onIndices);
   }, []);
 
-  // Poll indices only while the live stream is down.
-  useEffect(() => {
-    if (liveConnected) return undefined;
-    fetchMarketData();
-    const interval = setInterval(fetchMarketData, 20000);
-    return () => clearInterval(interval);
-  }, [liveConnected]);
+  // Fetch indices via React Query (pausing in background tabs, polling only if live stream is down)
+  const indicesQuery = useIndices({ enabled: !liveConnected });
 
-  const fetchMarketData = async () => {
-    try {
-      const payload = await getMarketIndices();
-      const rows = Array.isArray(payload) ? payload : payload?.data;
-      if (Array.isArray(rows) && rows.length > 0) {
-        setMarketData(rows);
-        setIndicesStale(Boolean(payload?.stale));
-      }
-    } catch (err) {
-      console.error(err);
+  useEffect(() => {
+    if (indicesQuery.data?.data && Array.isArray(indicesQuery.data.data)) {
+      setMarketData(indicesQuery.data.data);
+      setIndicesStale(Boolean(indicesQuery.data.stale));
     }
-  };
+  }, [indicesQuery.data]);
+
+  // Consolidate notifications polling with window visibility via React Query
+  const notifQuery = useNotifications();
+  useEffect(() => {
+    if (notifQuery.data && Array.isArray(notifQuery.data)) {
+      setNotifications(notifQuery.data);
+    }
+  }, [notifQuery.data, setNotifications]);
+
+  const markAllMutation = useMarkAllRead();
 
   const handleMarkAllRead = async () => {
     try {
-      await markAllRead();
+      await markAllMutation.mutateAsync();
       const updated = (notifications || []).map((n) => ({ ...n, read: true }));
       setNotifications(updated);
     } catch (err) {

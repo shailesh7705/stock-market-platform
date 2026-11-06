@@ -1,9 +1,8 @@
 // client/src/api/axios.js
 import axios from "axios";
+import toast from "react-hot-toast";
 import useAuthStore from "../store/authStore";
 
-// If running in local dev or on localhost, connect to local backend (port 5000)
-// Otherwise in production deployment, connect to production Render backend
 const isLocal =
   typeof window !== "undefined" &&
   (window.location.hostname === "localhost" ||
@@ -11,9 +10,10 @@ const isLocal =
     window.location.hostname.startsWith("192.168.") ||
     window.location.hostname.startsWith("10."));
 
+// If deployed on Vercel with same-origin /api rewrite, use relative /api, or env URL
 const rawUrl = isLocal
   ? (import.meta.env.VITE_DEV_API_URL || "http://localhost:5000/api")
-  : (import.meta.env.VITE_API_URL || "https://stock-market-platform-2j95.onrender.com/api");
+  : (import.meta.env.VITE_API_URL || "/api");
 
 const baseURL = rawUrl.replace(/\/+$/, "");
 
@@ -22,30 +22,55 @@ const API = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 15000,
+  timeout: 20000,
 });
 
-// Attach JWT Token + cache buster to every request
+let coldStartTimer = null;
+let coldStartToastId = null;
+
+// Attach JWT Token
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
   if (token) {
     req.headers.Authorization = `Bearer ${token}`;
   }
 
-  if (req.method === "get" || req.method === "GET") {
-    req.params = {
-      ...req.params,
-      _t: Date.now(),
-    };
+  // Detect cold start (> 3 seconds) for slow cloud boot
+  if (!coldStartTimer && typeof window !== "undefined") {
+    coldStartTimer = setTimeout(() => {
+      coldStartToastId = toast.loading("Waking up cloud server (Render spin-up)...", {
+        id: "server-cold-start",
+        duration: 8000,
+      });
+    }, 3000);
   }
 
   return req;
 });
 
-// Graceful 401 handling (auto clear expired token & redirect to login)
+// Dismiss cold start toast and handle responses
 API.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    if (coldStartTimer) {
+      clearTimeout(coldStartTimer);
+      coldStartTimer = null;
+    }
+    if (coldStartToastId) {
+      toast.dismiss(coldStartToastId);
+      coldStartToastId = null;
+    }
+    return res;
+  },
   (error) => {
+    if (coldStartTimer) {
+      clearTimeout(coldStartTimer);
+      coldStartTimer = null;
+    }
+    if (coldStartToastId) {
+      toast.dismiss(coldStartToastId);
+      coldStartToastId = null;
+    }
+
     if (error.response?.status === 401) {
       const url = error.config?.url || "";
       const isAuthEndpoint =

@@ -4,7 +4,33 @@ const User = require("../models/User");
 const { subscribeUser, subscribeIndices } = require("../utils/alertBus");
 const { snapshotIndices } = require("../utils/liveHub");
 
+const priceHub = require("../services/priceHub");
+
 const router = express.Router();
+
+router.get("/", (req, res) => {
+  const query = req.query.symbols || "";
+  const symbols = query
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
+
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  if (typeof res.flushHeaders === "function") res.flushHeaders();
+
+  res.write("event: ready\ndata: {\"ok\":true}\n\n");
+
+  priceHub.addClient(res, symbols);
+
+  req.on("close", () => {
+    priceHub.removeClient(res);
+  });
+});
+
 
 router.get("/alerts", async (req, res) => {
   const header = req.headers.authorization || "";

@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Card from "../ui/Card";
 import CompanyLogo from "../ui/CompanyLogo";
-import { getMarketMovers } from "../../services/marketService";
+import { useMarketMovers } from "../../hooks/queries/useMarketMovers";
 import {
   TrendingUp,
   TrendingDown,
@@ -72,28 +72,10 @@ function Sparkline({ data = [], positive = true, width = 84, height = 24 }) {
 export default function MarketMovers() {
   const [capCategory, setCapCategory] = useState("large"); // "large" | "mid" | "small"
   const [directionTab, setDirectionTab] = useState("gainers"); // "gainers" | "losers"
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showMethodology, setShowMethodology] = useState(false);
   const navigate = useNavigate();
 
-  const fetchMoversData = async () => {
-    try {
-      setLoading(true);
-      const res = await getMarketMovers();
-      setData(res);
-    } catch (err) {
-      console.error("[MarketMovers] Fetch failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMoversData();
-    const interval = setInterval(fetchMoversData, 30000); // 30s auto-refresh
-    return () => clearInterval(interval);
-  }, []);
+  const { data, isLoading: loading, refetch: fetchMoversData } = useMarketMovers();
 
   // Current active stock list based on chosen Cap and Direction
   const currentStocks = useMemo(() => {

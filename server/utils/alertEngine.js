@@ -23,13 +23,25 @@ const OWNER = `${os.hostname()}:${process.pid}`;
 let isProcessing = false;
 let scheduled = false;
 
+const engineHealth = {
+  lastRunAt: null,
+  durationMs: 0,
+  triggeredCount: 0,
+  status: "idle",
+  lastError: null,
+};
+
+function getAlertEngineHealth() {
+  return { ...engineHealth };
+}
+
 async function fetchQuoteMap(symbols) {
   const prices = new Map();
   for (const group of chunk(symbols, QUOTE_CHUNK)) {
     try {
       const raw = await Promise.race([
         yahooFinance.quote(group, {}, YF_OPTS),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Quote timeout")), 8000)),
+        new Promise((_, reject) => { const t = setTimeout(() => reject(new Error("Quote timeout")), 8000); if (t.unref) t.unref(); }),
       ]);
       const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
       for (const quote of list) {
@@ -144,6 +156,7 @@ async function evaluateAlerts() {
 
   if (!hits.length) return;
   console.log(`[AlertEngine] Triggered ${hits.length} alert(s).`);
+  engineHealth.triggeredCount += hits.length;
 
   const users = await User.find({ _id: { $in: hits.map((alert) => alert.user) } }).select("email");
   const emails = new Map(users.map((user) => [String(user._id), user.email]));
@@ -160,26 +173,42 @@ const checkAlerts = async () => {
     return;
   }
 
+  const startTime = Date.now();
   isProcessing = true;
+  engineHealth.status = "running";
+  engineHealth.lastRunAt = new Date();
+
   let leased = false;
   try {
     const sessionOpen = isMarketOpen();
     if (!sessionOpen) {
       const pending = await Alert.exists({ triggered: true, emailStatus: "pending" });
-      if (!pending) return;
+      if (!pending) {
+        engineHealth.status = "idle";
+        engineHealth.durationMs = Date.now() - startTime;
+        return;
+      }
     }
 
     leased = await tryAcquire(Job, { key: LEASE_KEY, owner: OWNER, ttlMs: LEASE_MS });
     if (!leased) {
       console.log("[AlertEngine] Another instance holds the lease, skipping tick.");
+      engineHealth.status = "idle";
+      engineHealth.durationMs = Date.now() - startTime;
       return;
     }
 
     await retryPendingEmails();
     if (sessionOpen) await evaluateAlerts();
+
+    engineHealth.status = "idle";
+    engineHealth.lastError = null;
   } catch (error) {
+    engineHealth.status = "error";
+    engineHealth.lastError = error.message;
     console.error("[AlertEngine] Error in loop:", error.message);
   } finally {
+    engineHealth.durationMs = Date.now() - startTime;
     if (leased) {
       try {
         await releaseLease(Job, { key: LEASE_KEY, owner: OWNER });
@@ -207,3 +236,4 @@ const startAlertEngine = () => {
 
 module.exports = startAlertEngine;
 module.exports.checkAlerts = checkAlerts;
+module.exports.getAlertEngineHealth = getAlertEngineHealth;

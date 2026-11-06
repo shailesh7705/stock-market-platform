@@ -127,3 +127,7 @@ export function getMarketStatus(now = new Date()) {
     holiday,
   };
 }
+
+export function isMarketOpen(now = new Date()) {
+  return getMarketStatus(now).phase === "open";
+}

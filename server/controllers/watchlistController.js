@@ -34,9 +34,7 @@ const safeQuote = async (symbols) => {
   try {
     const result = await Promise.race([
       yahooFinance.quote(symbols, {}, YF_OPTS),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 8000)
-      ),
+      new Promise((_, reject) => { const t = setTimeout(() => reject(new Error("Timeout")), 8000); if (t.unref) t.unref(); }),
     ]);
     return result;
   } catch (err) {

@@ -14,7 +14,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowDownRight, ArrowUpRight, Bell, GripVertical, Trash2, Zap } from "lucide-react";
-import { Sparklines, SparklinesLine } from "react-sparklines";
+import Sparkline from "../ui/Sparkline";
 import CompanyLogo from "../ui/CompanyLogo";
 
 function cleanSymbol(symbol = "") {
@@ -51,12 +51,14 @@ function SortableRow({ stock, boards, onOpen, onAlert, onRemove, onMove, onAddTa
           >
             <GripVertical size={16} />
           </button>
-          <CompanyLogo symbol={sym} companyName={stock.name} size={40} />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-white group-hover:text-emerald-400">{sym}</span>
-              <span className="text-[10px] font-semibold text-gray-500 bg-white/5 px-1.5 py-0.5 rounded">NSE</span>
-              {stock.pulseScore && (
+          <CompanyLogo symbol={sym} companyName={stock.name} size={36} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-extrabold text-white group-hover:text-emerald-400 transition-colors">
+                {sym}
+              </span>
+              <span className="text-[10px] font-semibold text-gray-500">NSE</span>
+              {stock.pulseScore?.score !== undefined && stock.pulseScore.score !== null && (
                 <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono inline-flex items-center gap-1">
                   <Zap size={10} /> {stock.pulseScore.score} · {stock.pulseScore.grade}
                 </span>
@@ -66,11 +68,9 @@ function SortableRow({ stock, boards, onOpen, onAlert, onRemove, onMove, onAddTa
           </div>
         </div>
 
-        <div className="w-24 h-8 shrink-0 hidden lg:block">
+        <div className="w-24 h-8 shrink-0 hidden lg:flex items-center justify-center">
           {Array.isArray(stock.data) && stock.data.length > 1 ? (
-            <Sparklines data={stock.data} margin={2}>
-              <SparklinesLine color={stock.positive ? "#10b981" : "#f43f5e"} style={{ fill: "none", strokeWidth: 2 }} />
-            </Sparklines>
+            <Sparkline data={stock.data} positive={stock.positive} width={96} height={28} strokeWidth={2} />
           ) : null}
         </div>
 
@@ -89,82 +89,111 @@ function SortableRow({ stock, boards, onOpen, onAlert, onRemove, onMove, onAddTa
               className="h-11 px-3 rounded-xl bg-amber-500/10 text-amber-400 text-xs font-bold flex items-center gap-1.5 border border-amber-500/20"
             >
               <Bell size={13} />
-              <span className="hidden sm:inline">Set Alert</span>
+              Alert
             </button>
             <button
               type="button"
               onClick={(event) => onRemove(event, stock._id, stock.symbol)}
-              className="w-11 h-11 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center"
+              className="w-11 h-11 rounded-xl text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center"
               aria-label={`Remove ${sym}`}
             >
-              <Trash2 size={14} />
+              <Trash2 size={15} />
             </button>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 pl-12" onClick={(event) => event.stopPropagation()}>
-        {(stock.tags || []).map((tag) => (
-          <button
-            key={tag}
-            type="button"
-            onClick={() => onRemoveTag(stock, tag)}
-            className="h-7 px-2 rounded-full bg-cyan-500/10 text-cyan-300 text-[10px] font-bold"
+      <div
+        className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/[0.04]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Board:</span>
+          <select
+            value={stock.listName || "Primary"}
+            onChange={(event) => onMove(stock._id, event.target.value)}
+            className="bg-[#080d18] border border-white/10 rounded-lg text-xs text-gray-300 px-2 py-1 focus:outline-none"
           >
-            {tag} ×
-          </button>
-        ))}
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            const input = event.currentTarget.elements.tag;
-            onAddTag(stock, input.value);
-            input.value = "";
-          }}
-        >
-          <input
-            name="tag"
-            placeholder="Add tag"
-            className="h-7 w-24 rounded-full bg-[#080d1a] border border-white/10 px-2 text-[10px] text-white outline-none"
-          />
-        </form>
-        <select
-          value={stock.listName || "My Watchlist"}
-          onChange={(event) => onMove(stock, event.target.value)}
-          className="h-7 rounded-full bg-[#080d1a] border border-white/10 px-2 text-[10px] text-gray-300 outline-none"
-        >
-          {boards.map((board) => (
-            <option key={board.name} value={board.name}>
-              {board.name}
-            </option>
+            {boards.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+          {(stock.tags || []).map((tag) => (
+            <span
+              key={tag}
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/5 text-gray-300 border border-white/10 flex items-center gap-1"
+            >
+              #{tag}
+              <button
+                type="button"
+                onClick={() => onRemoveTag(stock._id, tag)}
+                className="hover:text-rose-400 text-gray-500 ml-0.5"
+                aria-label={`Remove tag ${tag}`}
+              >
+                ×
+              </button>
+            </span>
           ))}
-        </select>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const input = event.target.elements.tag;
+              if (input.value.trim()) {
+                onAddTag(stock._id, input.value.trim());
+                input.value = "";
+              }
+            }}
+            className="flex items-center"
+          >
+            <input
+              name="tag"
+              type="text"
+              placeholder="+tag"
+              className="bg-[#080d18] border border-white/10 rounded-md text-[10px] text-gray-300 px-1.5 py-0.5 w-16 focus:w-24 transition-all focus:outline-none focus:border-amber-500/50"
+            />
+          </form>
+        </div>
       </div>
     </div>
   );
 }
 
-export default function SortableWatchlist({ items, boards, onReorder, onOpen, onAlert, onRemove, onMove, onAddTag, onRemoveTag }) {
+export default function SortableWatchlist({
+  stocks = [],
+  boards = ["Primary"],
+  onReorder,
+  onOpen,
+  onAlert,
+  onRemove,
+  onMove,
+  onAddTag,
+  onRemoveTag,
+}) {
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
   );
 
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = stocks.findIndex((s) => s._id === active.id);
+    const newIndex = stocks.findIndex((s) => s._id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const reordered = arrayMove(stocks, oldIndex, newIndex);
+    onReorder(reordered);
+  };
+
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={({ active, over }) => {
-        if (!over || active.id === over.id) return;
-        const oldIndex = items.findIndex((item) => item._id === active.id);
-        const newIndex = items.findIndex((item) => item._id === over.id);
-        if (oldIndex < 0 || newIndex < 0) return;
-        onReorder(arrayMove(items, oldIndex, newIndex));
-      }}
-    >
-      <SortableContext items={items.map((item) => item._id)} strategy={verticalListSortingStrategy}>
-        <div className="divide-y divide-white/[0.04]">
-          {items.map((stock) => (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={stocks.map((s) => s._id)} strategy={verticalListSortingStrategy}>
+        <div className="divide-y divide-white/5">
+          {stocks.map((stock) => (
             <SortableRow
               key={stock._id}
               stock={stock}

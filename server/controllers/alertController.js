@@ -15,9 +15,7 @@ async function fetchCurrentPrice(symbol) {
   try {
     const quote = await Promise.race([
       yahooFinance.quote(symbol, {}, YF_OPTS),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 4000)
-      ),
+      new Promise((_, reject) => { const t = setTimeout(() => reject(new Error("Timeout")), 4000); if (t.unref) t.unref(); }),
     ]);
     const price = Number(quote?.regularMarketPrice);
     return Number.isFinite(price) && price > 0 ? price : null;

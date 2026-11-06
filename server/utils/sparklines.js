@@ -14,7 +14,7 @@ async function sparklineFor(symbol) {
   try {
     const chart = await Promise.race([
       yahooFinance.chart(symbol, { period1, interval: "5m" }, YF_OPTS),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000)),
+      new Promise((_, reject) => { const t = setTimeout(() => reject(new Error("Timeout")), 8000); if (t.unref) t.unref(); }),
     ]);
     const points = (chart?.quotes || [])
       .map((quote) => Number(quote.close))

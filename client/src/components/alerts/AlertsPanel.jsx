@@ -13,7 +13,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getAlerts, deleteAlert } from "../../services/alertService";
+import { useAlerts, useDeleteAlert } from "../../hooks/queries/useAlerts";
 import useAlertStore from "../../store/alertStore";
 import CreateAlertModal from "./CreateAlertModal";
 import toast from "react-hot-toast";
@@ -118,39 +118,23 @@ function AlertCard({ alert, onDelete }) {
 function AlertsPanel() {
   const { alerts, setAlerts, removeAlert } = useAlertStore();
   const [modalOpen, setModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { data: alertsData, isLoading: loading } = useAlerts();
+  const deleteAlertMutation = useDeleteAlert();
 
   useEffect(() => {
-    fetchAlerts();
-    const onAlert = () => fetchAlerts();
-    window.addEventListener("stockpulse:alert", onAlert);
-    const interval = setInterval(fetchAlerts, 60000);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("stockpulse:alert", onAlert);
-    };
-  }, []);
-
-  const fetchAlerts = async () => {
-    try {
-      const data = await getAlerts();
-      setAlerts(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+    if (alertsData && Array.isArray(alertsData)) {
+      setAlerts(alertsData);
     }
-  };
+  }, [alertsData, setAlerts]);
 
   const handleDelete = async (id, symbol) => {
     try {
       removeAlert(id);
-      await deleteAlert(id);
+      await deleteAlertMutation.mutateAsync(id);
       toast.success(`Alert for ${cleanSymbol(symbol)} deleted`);
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete alert");
-      fetchAlerts();
     }
   };
 
